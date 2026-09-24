@@ -9,4 +9,6 @@ until [ -f /var/www/html/artisan ]; do
     sleep 2
 done
 
+/usr/local/bin/bootstrap-env.sh
+
 exec php artisan queue:work --tries=3 --backoff=5

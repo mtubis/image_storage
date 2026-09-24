@@ -28,8 +28,10 @@ RUN echo "${PHP_EXTENSION_INSTALLER_SHA256}  /usr/local/bin/install-php-extensio
 RUN install-php-extensions imagick exif pdo_mysql intl zip opcache
 
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/zz-app.ini
+COPY docker/php/bootstrap-env.sh /usr/local/bin/bootstrap-env.sh
+COPY docker/php/php-entrypoint.sh /usr/local/bin/php-entrypoint.sh
 COPY docker/php/queue-entrypoint.sh /usr/local/bin/queue-entrypoint.sh
-RUN chmod +x /usr/local/bin/queue-entrypoint.sh
+RUN chmod +x /usr/local/bin/bootstrap-env.sh /usr/local/bin/php-entrypoint.sh /usr/local/bin/queue-entrypoint.sh
 
 # Align the container's www-data with the host user so bind-mounted files
 # in backend/ stay owned by the developer, not root.
@@ -40,3 +42,9 @@ RUN groupmod -g "${APP_GID}" www-data \
 
 USER www-data
 WORKDIR /var/www/html
+
+# Bootstraps backend/.env on a fresh clone before falling through to the
+# base image's own entrypoint (php-fpm); `queue` overrides this in
+# docker-compose.yml, so it only affects the `php` service.
+ENTRYPOINT ["/usr/local/bin/php-entrypoint.sh"]
+CMD ["php-fpm"]

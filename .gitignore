@@ -1,18 +1,10 @@
-# Backend (Laravel)
+# Backend (Laravel) — storage/ and bootstrap/cache/ are already handled by
+# Laravel's own nested .gitignore files; only cross-cutting paths go here.
+# Pure PHP API, no npm/vite usage, so no /backend/node_modules entry.
 /backend/vendor
-/backend/node_modules
 /backend/.env
 /backend/.env.*
 !/backend/.env.example
-/backend/storage/*.key
-/backend/storage/app/*
-!/backend/storage/app/.gitkeep
-/backend/storage/framework/cache/*
-/backend/storage/framework/sessions/*
-/backend/storage/framework/testing/*
-/backend/storage/framework/views/*
-/backend/storage/logs/*
-/backend/bootstrap/cache/*.php
 /backend/public/storage
 /backend/.phpunit.cache
 

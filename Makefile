@@ -19,29 +19,29 @@ sh-php:
 	$(COMPOSE) exec php bash
 
 artisan:
-	$(COMPOSE) exec php php artisan $(cmd)
+	$(COMPOSE) exec -T php php artisan $(cmd)
 
 test-be:
-	$(COMPOSE) exec php vendor/bin/pest
+	$(COMPOSE) exec -T php vendor/bin/pest
 
 test-fe:
-	$(COMPOSE) exec frontend npm run test
+	$(COMPOSE) exec -T frontend npm run test
 
 lint-be:
-	$(COMPOSE) exec php vendor/bin/pint --test
-	$(COMPOSE) exec php vendor/bin/phpstan analyse
-	$(COMPOSE) exec php vendor/bin/rector --dry-run
+	$(COMPOSE) exec -T php vendor/bin/pint --test
+	$(COMPOSE) exec -T php vendor/bin/phpstan analyse
+	$(COMPOSE) exec -T php vendor/bin/rector --dry-run
 
 lint-fe:
-	$(COMPOSE) exec frontend npm run lint
-	$(COMPOSE) exec frontend npx tsc --noEmit
-	$(COMPOSE) exec frontend npx prettier --check .
+	$(COMPOSE) exec -T frontend npm run lint
+	$(COMPOSE) exec -T frontend npx tsc --noEmit
+	$(COMPOSE) exec -T frontend npx prettier --check .
 
 fix:
-	$(COMPOSE) exec php vendor/bin/pint
-	$(COMPOSE) exec php vendor/bin/rector
-	$(COMPOSE) exec frontend npx prettier --write .
-	$(COMPOSE) exec frontend npm run lint -- --fix
+	$(COMPOSE) exec -T php vendor/bin/pint
+	$(COMPOSE) exec -T php vendor/bin/rector
+	$(COMPOSE) exec -T frontend npx prettier --write .
+	$(COMPOSE) exec -T frontend npm run lint -- --fix
 
 check: lint-be test-be lint-fe test-fe
 
