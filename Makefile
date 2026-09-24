@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 COMPOSE := docker compose
 
-.PHONY: up down ps logs sh-php artisan test-be test-fe lint-be lint-fe build-fe fix check e2e
+.PHONY: up down ps logs sh-php artisan fixtures test-be test-fe lint-be lint-fe build-fe fix check e2e
 
 up:
 	DOCKER_UID=$$(id -u) DOCKER_GID=$$(id -g) $(COMPOSE) up -d --build
@@ -20,6 +20,10 @@ sh-php:
 
 artisan:
 	$(COMPOSE) exec -T php php artisan $(cmd)
+
+# Regenerates the committed image fixtures (backend/tests/Fixtures/README.md).
+fixtures:
+	$(COMPOSE) exec -T php php tests/Fixtures/generate.php
 
 test-be:
 	$(COMPOSE) exec -T php vendor/bin/pest

@@ -6,6 +6,11 @@
 *.md diff=markdown
 *.php diff=php
 
+# Test fixtures are byte-exact (e.g. the PDF is text-like); never normalise them.
+/tests/Fixtures/** -text -diff
+/tests/Fixtures/*.php text eol=lf diff=php
+/tests/Fixtures/*.md text eol=lf diff=markdown
+
 /.github export-ignore
 CHANGELOG.md export-ignore
 .styleci.yml export-ignore
