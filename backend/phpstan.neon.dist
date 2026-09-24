@@ -1,0 +1,15 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: max
+    # tests/ is not analysed: Pest's API (arch(), expectation chains, the bound
+    # $this in test closures) is resolved via magic calls PHPStan cannot follow
+    # without a third-party extension. Rector and Pint still cover tests/.
+    paths:
+        - app
+        - bootstrap/app.php
+        - config
+        - database
+        - routes
+        - tests/TestCase.php
