@@ -17,9 +17,11 @@ arch('contracts are interfaces')
     ->expect('App\Contracts')
     ->toBeInterfaces();
 
+// The HTTP *server* layer (requests, responses, uploads); adapters may use the HTTP client.
 arch('services do not depend on the HTTP layer')
     ->expect('App\Services')
-    ->not->toUse(['Illuminate\Http', 'App\Http']);
+    ->not->toUse(['Illuminate\Http', 'App\Http'])
+    ->ignoring('Illuminate\Http\Client');
 
 arch('DTOs are immutable')
     ->expect('App\Data')

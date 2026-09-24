@@ -35,6 +35,8 @@
         <server name="MAIL_MAILER" value="array"/>
         <server name="QUEUE_CONNECTION" value="sync"/>
         <server name="SESSION_DRIVER" value="array"/>
+        <!-- Tests fake HTTP; a local WEATHER_PROVIDER=fake must not change which class they test. -->
+        <server name="WEATHER_PROVIDER" value="open-meteo"/>
         <server name="PULSE_ENABLED" value="false"/>
         <server name="TELESCOPE_ENABLED" value="false"/>
         <server name="NIGHTWATCH_ENABLED" value="false"/>

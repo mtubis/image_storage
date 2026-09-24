@@ -6,13 +6,17 @@ namespace App\Providers;
 
 use App\Contracts\ImageMetadataExtractor;
 use App\Contracts\ThumbnailGenerator;
+use App\Contracts\WeatherProvider;
 use App\Services\Images\InterventionThumbnailGenerator;
 use App\Services\Images\NativeImageMetadataExtractor;
+use App\Services\Weather\FakeWeatherProvider;
+use App\Services\Weather\OpenMeteoWeatherProvider;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\ServiceProvider;
 use Imagick;
+use InvalidArgumentException;
 
 final class AppServiceProvider extends ServiceProvider
 {
@@ -32,6 +36,26 @@ final class AppServiceProvider extends ServiceProvider
                 quality: config()->integer('images.thumbnail_quality'),
                 allowedExtensions: array_merge(...array_values($allowedTypes)),
             );
+        });
+
+        $this->app->singleton(function (): WeatherProvider {
+            $provider = config()->string('services.weather.provider');
+
+            return match ($provider) {
+                'open-meteo' => new OpenMeteoWeatherProvider(
+                    url: config()->string('services.open_meteo.url'),
+                    latitude: config()->float('services.open_meteo.latitude'),
+                    longitude: config()->float('services.open_meteo.longitude'),
+                    timezone: config()->string('services.open_meteo.timezone'),
+                    timeoutSeconds: config()->integer('services.open_meteo.timeout'),
+                    connectTimeoutSeconds: config()->integer('services.open_meteo.connect_timeout'),
+                    attempts: config()->integer('services.open_meteo.attempts'),
+                    retrySleepMilliseconds: config()->integer('services.open_meteo.retry_sleep_ms'),
+                ),
+                'fake' => new FakeWeatherProvider,
+                // A typo must not silently fall back to real network calls (or to fake data).
+                default => throw new InvalidArgumentException("Unknown weather provider [{$provider}]."),
+            };
         });
     }
 
