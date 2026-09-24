@@ -1,0 +1,42 @@
+# Backend (Laravel)
+/backend/vendor
+/backend/node_modules
+/backend/.env
+/backend/.env.*
+!/backend/.env.example
+/backend/storage/*.key
+/backend/storage/app/*
+!/backend/storage/app/.gitkeep
+/backend/storage/framework/cache/*
+/backend/storage/framework/sessions/*
+/backend/storage/framework/testing/*
+/backend/storage/framework/views/*
+/backend/storage/logs/*
+/backend/bootstrap/cache/*.php
+/backend/public/storage
+/backend/.phpunit.cache
+
+# Frontend (Vite/React)
+/frontend/node_modules
+/frontend/dist
+/frontend/coverage
+/frontend/.env
+/frontend/.env.*
+!/frontend/.env.example
+
+# E2E (Playwright)
+/e2e/node_modules
+/e2e/test-results
+/e2e/playwright-report
+
+# Claude Code local configuration and planning docs — not part of the delivered repo
+/CLAUDE.md
+/PLAN.md
+/.claude/
+/.claude*
+
+# Editors / OS
+.DS_Store
+*.log
+.idea
+.vscode
