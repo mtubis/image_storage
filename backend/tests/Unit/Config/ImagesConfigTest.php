@@ -8,6 +8,8 @@ it('matches the assignment upload constraints', function (): void {
     expect(config('images.max_size_kb'))->toBe(5120)
         ->and(config('images.min_width'))->toBe(500)
         ->and(config('images.min_height'))->toBe(500)
+        ->and(config('images.max_width'))->toBe(10000)
+        ->and(config('images.max_height'))->toBe(10000)
         ->and(config('images.page_size'))->toBe(10)
         ->and(config('images.thumbnail_max_edge'))->toBe(400);
 });

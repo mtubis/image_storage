@@ -33,9 +33,12 @@ metadata) fails there before it breaks anything else. In tests, reference fixtur
 - The EXIF blocks carry the tags Exif 2.32 marks as mandatory: ExifVersion, FlashpixVersion,
   ColorSpace and PixelX/YDimension. JPEG also gets YCbCrPositioning and ComponentsConfiguration.
 - **TIFF** files are RGB 8-bit, a single Adobe Deflate (`zlib`) strip, a few KB each.
-- **Not committed (planned in step 1.3):** oversized files (> 5 MB) and files whose extension
-  doesn't match their content (for example, a PNG named `.jpg`). Tests build these at runtime
-  from the fixtures here.
+- **Not committed:** oversized files (> 5 MB) and images beyond the maximum resolution are
+  built at runtime by `jpeg_of_size()` (a fixture padded after the JPEG EOI marker) and
+  `png_of_dimensions()` in `tests/Pest.php`. Files whose name doesn't match their content (for
+  example, a PDF named `.jpg`) are uploads of the fixtures here under another client name.
+  Tests upload them as real `UploadedFile`s via `uploaded_fixture()`, never
+  `UploadedFile::fake()`, which reports a MIME type derived from the name.
 
 ## Files
 

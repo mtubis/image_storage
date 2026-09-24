@@ -25,6 +25,12 @@ return [
     'min_width' => 500,
     'min_height' => 500,
 
+    // Upper bound against decompression bombs: a flat 30000×30000 PNG fits in 5 MB but
+    // decodes to gigabytes of pixels when the thumbnail is generated. Not an assignment
+    // requirement; generous enough for any real camera or scanner output.
+    'max_width' => 10000,
+    'max_height' => 10000,
+
     // Longest edge of the generated WebP thumbnail, in pixels.
     'thumbnail_max_edge' => 400,
 
