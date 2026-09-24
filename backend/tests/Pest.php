@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Image;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -24,6 +25,19 @@ function fake_image_storage(): void
     Storage::fake('originals');
     // A fake disk drops the configured URL; keep it, the API returns thumbnail URLs.
     Storage::fake('thumbnails', ['url' => config('filesystems.disks.thumbnails.url')]);
+}
+
+/**
+ * An image row whose original on the fake disk holds the given fixture's bytes.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function stored_image(string $fixture, array $attributes = []): Image
+{
+    $image = Image::factory()->create($attributes);
+    Storage::disk('originals')->put($image->original_path, fixture_contents($fixture));
+
+    return $image;
 }
 
 /**

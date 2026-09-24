@@ -32,6 +32,7 @@ final class ImageResource extends JsonResource
             'height' => $this->height,
             // Absolute: the frontend runs on another origin.
             'thumbnail_url' => Storage::disk('thumbnails')->url($this->thumbnail_path),
+            'download_url' => route('v1.images.download', $this->id),
             'uploader_name' => $this->uploader_name,
             // Filled in by a queued job shortly after the upload; null until then or if unavailable.
             'temperature_c' => $this->temperature_c,

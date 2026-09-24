@@ -134,6 +134,7 @@ it('lists every image in the same shape as the upload response', function (): vo
         'width' => 640,
         'height' => 500,
         'thumbnail_url' => config('app.url')."/storage/thumbnails/{$image->thumbnail_path}",
+        'download_url' => config('app.url')."/api/v1/images/{$image->id}/download",
         'uploader_name' => 'Jan Kowalski',
         'temperature_c' => -3.5,
         'created_at' => '2026-09-25T08:30:00Z',

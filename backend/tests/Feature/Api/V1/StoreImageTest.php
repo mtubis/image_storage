@@ -34,6 +34,7 @@ it('responds with the created image', function (): void {
             'width' => 500,
             'height' => 500,
             'thumbnail_url' => config('app.url')."/storage/thumbnails/{$image->id}.webp",
+            'download_url' => config('app.url')."/api/v1/images/{$image->id}/download",
             'uploader_name' => 'Jan Kowalski',
             'temperature_c' => null,
             'created_at' => '2026-09-25T08:30:00Z',
