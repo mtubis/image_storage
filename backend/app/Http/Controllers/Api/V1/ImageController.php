@@ -7,16 +7,33 @@ namespace App\Http\Controllers\Api\V1;
 use App\Actions\Images\StoreImage;
 use App\Exceptions\ThumbnailGenerationFailed;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ListImagesRequest;
 use App\Http\Requests\StoreImageRequest;
 use App\Http\Resources\ImageResource;
+use App\Models\Image;
 use App\Rules\CompleteJpeg;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 final class ImageController extends Controller
 {
+    /**
+     * Cursor pagination keeps infinite scroll stable while images are uploaded or deleted,
+     * which an offset would turn into duplicated or skipped items.
+     */
+    public function index(ListImagesRequest $request): AnonymousResourceCollection
+    {
+        return ImageResource::collection(
+            Image::query()->forListing()->cursorPaginate(
+                config()->integer('images.page_size'),
+                cursor: $request->listingCursor(),
+            ),
+        );
+    }
+
     public function store(StoreImageRequest $request, StoreImage $storeImage): JsonResponse
     {
         try {

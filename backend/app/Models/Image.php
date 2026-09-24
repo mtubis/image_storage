@@ -8,6 +8,8 @@ use Carbon\CarbonImmutable;
 use Database\Factories\ImageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -52,6 +54,44 @@ final class Image extends Model
 {
     /** @use HasFactory<ImageFactory> */
     use HasFactory, HasUlids;
+
+    /**
+     * Sort columns of the listing, all descending: newest first, the ID breaks ties between
+     * uploads in the same second. They are also the parameters of a listing cursor.
+     */
+    public const array LISTING_ORDER = ['created_at', 'id'];
+
+    /**
+     * The columns ImageResource reads. The metadata JSON can be large (maker notes, binary
+     * values) and the e-mail is never shown, so neither is loaded. A column missing here is an
+     * exception outside production (strict mode) and fails the listing's full-shape test.
+     */
+    private const array LISTING_COLUMNS = [
+        'id',
+        'original_name',
+        'extension',
+        'mime_type',
+        'size_bytes',
+        'width',
+        'height',
+        'thumbnail_path',
+        'uploader_name',
+        'temperature_c',
+        'created_at',
+    ];
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function forListing(Builder $query): void
+    {
+        $query->select(self::LISTING_COLUMNS);
+
+        foreach (self::LISTING_ORDER as $column) {
+            $query->orderByDesc($column);
+        }
+    }
 
     /**
      * @return array<string, string>
