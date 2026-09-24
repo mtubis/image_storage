@@ -20,3 +20,8 @@ arch('contracts are interfaces')
 arch('services do not depend on the HTTP layer')
     ->expect('App\Services')
     ->not->toUse(['Illuminate\Http', 'App\Http']);
+
+arch('DTOs are immutable')
+    ->expect('App\Data')
+    ->toBeFinal()
+    ->toBeReadonly();

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Contracts\ImageMetadataExtractor;
 use App\Contracts\ThumbnailGenerator;
 use App\Services\Images\InterventionThumbnailGenerator;
+use App\Services\Images\NativeImageMetadataExtractor;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
@@ -19,6 +21,8 @@ final class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(ImageMetadataExtractor::class, NativeImageMetadataExtractor::class);
+
         $this->app->singleton(function (): ThumbnailGenerator {
             /** @var array<string, list<string>> $allowedTypes */
             $allowedTypes = config()->array('images.allowed_types');

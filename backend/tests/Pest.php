@@ -32,6 +32,14 @@ function fixture_path(string $name): string
 }
 
 /**
+ * Bytes of a committed fixture from tests/Fixtures.
+ */
+function fixture_contents(string $name): string
+{
+    return (string) file_get_contents(fixture_path($name));
+}
+
+/**
  * A real (not faked) upload of the given bytes, backed by a temporary file.
  *
  * UploadedFile::fake() reports a MIME type derived from the file *name*, which would make

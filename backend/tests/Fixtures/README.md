@@ -63,7 +63,9 @@ metadata) fails there before it breaks anything else. In tests, reference fixtur
 
 **"Camera" EXIF** (`exif-iptc.tiff`, `exif.png`, `exif.webp`):
 - IFD0: `Make` `FixtureCam`, `Model` `FixtureCam 500`, `Software`, `DateTime`, `Artist`
-  `Jan Kowalski`, and resolution 72 dpi.
+  `Jan Kowalski`, and resolution 72 dpi. Exception: in `exif.webp`, ImageMagick rewrites
+  `XResolution`/`YResolution`/`ResolutionUnit` from the image's own (stripped, zero)
+  resolution when it writes the profile, so they read `0/1` and `1` there.
 - Exif sub-IFD: `ExifVersion` `0232`, `DateTimeOriginal` `2024:05:01 12:34:56`,
   `FlashpixVersion`, `ColorSpace` sRGB, `PixelX/YDimension`.
 
@@ -108,3 +110,31 @@ Further details that matter for metadata extraction:
 - `Make` and other `ASCII` values come back verbatim; PHP does not transcode or validate them.
 - ext-exif uses Exif 2.1 names for some tags, e.g. `PixelXDimension`/`PixelYDimension` →
   `ExifImageWidth`/`ExifImageLength`, `FlashpixVersion` → `FlashPixVersion`.
+
+## What the metadata extractor returns per format
+
+`NativeImageMetadataExtractor` (`app/Services/Images`) builds on the behaviour above so that
+every format yields the same shape: `exif` holds ext-exif's sections (`IFD0`, `EXIF`, `GPS`,
+…) without the PHP-computed `FILE` and `COMPUTED`, and `iptc` holds `iptcparse()` output.
+Values that are not valid UTF-8 are stored as `{"base64": "…"}`.
+
+| Format | EXIF source | IPTC source |
+|---|---|---|
+| JPEG | `exif_read_data()` on the bytes | `APP13` via `getimagesizefromstring()` |
+| TIFF | `exif_read_data()` on the bytes (structural IFD0 tags included) | tag 33723 `IPTC/NAA`, removed from `exif`; a LONG-typed tag (Photoshop) is repacked in the file's byte order |
+| PNG | `eXIf` chunk, parsed as a TIFF stream | — |
+| WebP | RIFF `EXIF` chunk, parsed as a TIFF stream (Imagick's `pingImage()` doesn't expose it) | — |
+| BMP | — | — |
+
+Damaged metadata never fails an upload: ext-exif's warnings are muted and whatever it could
+read is kept (e.g. IPTC survives a broken EXIF IFD); chunk lengths are bounds-checked. An
+empty `exif` or `iptc` map is left out of `toArray()`, since PHP would encode it as `[]`.
+
+Known limitations (PHP's APIs, not the formats):
+
+- **Multi-page TIFF:** ext-exif reads only IFD0 and IFD1 and names IFD1 `THUMBNAIL` (its
+  JPEG meaning); in a TIFF that is page 2. Pages 3+ are not read (`multipage.tiff` pins this).
+- **`MakerNote`** of an unknown vendor comes back as `null`, so its raw bytes are lost.
+- **JPEG IPTC** split across several `APP13` segments: PHP keeps only the first one.
+- **PNG `tEXt`/`zTXt` "Raw profile type exif/iptc"** chunks (hex-encoded, an ImageMagick
+  and exiftool convention, not part of the PNG spec) are not read. XMP is out of scope.

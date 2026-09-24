@@ -14,11 +14,6 @@ function thumbnail_of(string $contents): Imagick
     return $thumbnail;
 }
 
-function fixture_contents(string $name): string
-{
-    return (string) file_get_contents(fixture_path($name));
-}
-
 function blank_image(int $width, int $height, string $background, string $format): string
 {
     $image = new Imagick;
