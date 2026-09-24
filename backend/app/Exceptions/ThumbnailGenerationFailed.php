@@ -14,6 +14,11 @@ final class ThumbnailGenerationFailed extends RuntimeException
         return new self("Cannot generate a thumbnail for content of type [{$mimeType}].");
     }
 
+    public static function unreadableSize(): self
+    {
+        return new self('Cannot read the image size from its header.');
+    }
+
     public static function because(Throwable $previous): self
     {
         return new self('Cannot generate a thumbnail: '.$previous->getMessage(), previous: $previous);

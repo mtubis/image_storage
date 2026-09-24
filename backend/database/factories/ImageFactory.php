@@ -33,8 +33,9 @@ final class ImageFactory extends Factory
             'size_bytes' => fake()->numberBetween(20_000, Config::integer('images.max_size_kb') * 1024),
             'width' => fake()->numberBetween(Config::integer('images.min_width'), 4000),
             'height' => fake()->numberBetween(Config::integer('images.min_height'), 4000),
-            'original_path' => sprintf('originals/%s.%s', $storedName, $extension),
-            'thumbnail_path' => sprintf('thumbnails/%s.webp', $storedName),
+            // Relative to the "originals" and "thumbnails" disks.
+            'original_path' => sprintf('%s.%s', $storedName, $extension),
+            'thumbnail_path' => sprintf('%s.webp', $storedName),
             'uploader_name' => fake()->name(),
             'uploader_email' => fake()->safeEmail(),
             'metadata' => null,
@@ -44,7 +45,7 @@ final class ImageFactory extends Factory
     /**
      * @param  array<string, mixed>  $metadata
      */
-    public function withMetadata(array $metadata = ['EXIF' => ['Make' => 'Canon', 'Model' => 'EOS 5D']]): self
+    public function withMetadata(array $metadata = ['exif' => ['IFD0' => ['Make' => 'Canon', 'Model' => 'EOS 5D']]]): self
     {
         return $this->state(fn (): array => ['metadata' => $metadata]);
     }

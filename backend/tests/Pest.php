@@ -4,17 +4,27 @@ declare(strict_types=1);
 
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 pest()->extend(TestCase::class)->in('Feature', 'Unit');
 
-// assertValid() alone would also pass on a 404, so pin the status an upload reaches after
-// validation: 501 until step 1.8 implements storing, then 201.
+// assertValid() alone would also pass on a 404, so pin the status of a stored upload.
 TestResponse::macro('assertPassedValidation', function (): TestResponse {
     /** @var TestResponse<Response> $this */
-    return $this->assertValid()->assertStatus(501);
+    return $this->assertValid()->assertCreated();
 });
+
+/**
+ * Replace both image disks with temporary ones, so no test writes to the real storage.
+ */
+function fake_image_storage(): void
+{
+    Storage::fake('originals');
+    // A fake disk drops the configured URL; keep it, the API returns thumbnail URLs.
+    Storage::fake('thumbnails', ['url' => config('filesystems.disks.thumbnails.url')]);
+}
 
 /**
  * Absolute path of a committed fixture from tests/Fixtures (see its README.md).

@@ -35,7 +35,8 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Its root contains the originals disk; they are served only by the download endpoint.
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],
@@ -46,6 +47,27 @@ return [
             'url' => rtrim((string) env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,
+            'report' => false,
+        ],
+
+        // Uploaded originals: never web-accessible, served only by the download endpoint.
+        // "throw": a failed write must fail the upload, not return a silently ignored false.
+        'originals' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/originals'),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => false,
+        ],
+
+        // Generated WebP thumbnails: metadata-free, served directly by the web server
+        // through the "public/storage" link.
+        'thumbnails' => [
+            'driver' => 'local',
+            'root' => storage_path('app/public/thumbnails'),
+            'url' => rtrim((string) env('APP_URL', 'http://localhost'), '/').'/storage/thumbnails',
+            'visibility' => 'public',
+            'throw' => true,
             'report' => false,
         ],
 

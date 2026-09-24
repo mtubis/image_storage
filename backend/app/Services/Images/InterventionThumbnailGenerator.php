@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Images;
 
 use App\Contracts\ThumbnailGenerator;
+use App\Data\Thumbnail;
 use App\Exceptions\ThumbnailGenerationFailed;
 use finfo;
 use Imagick;
@@ -13,6 +14,7 @@ use Intervention\Image\Drivers\Imagick\Driver;
 use Intervention\Image\Encoders\WebpEncoder;
 use Intervention\Image\Exceptions\ImageException;
 use Intervention\Image\ImageManager;
+use RuntimeException;
 use Symfony\Component\Mime\MimeTypes;
 
 /**
@@ -36,6 +38,14 @@ final readonly class InterventionThumbnailGenerator implements ThumbnailGenerato
         'bmp' => 'BMP',
     ];
 
+    // EXIF orientations 5–8 rotate the image by 90°, so its displayed edges are swapped.
+    private const array TRANSPOSING_ORIENTATIONS = [
+        Imagick::ORIENTATION_LEFTTOP,
+        Imagick::ORIENTATION_RIGHTTOP,
+        Imagick::ORIENTATION_RIGHTBOTTOM,
+        Imagick::ORIENTATION_LEFTBOTTOM,
+    ];
+
     private ImageManager $manager;
 
     /**
@@ -55,16 +65,18 @@ final readonly class InterventionThumbnailGenerator implements ThumbnailGenerato
         );
     }
 
-    public function generate(string $contents): string
+    public function generate(string $contents): Thumbnail
     {
         $coder = $this->coderFor($contents);
+        [$storedWidth, $storedHeight] = $this->storedSize($contents);
 
         // readImageBlob() ignores the "[0]" page selector, so the bytes go through a file.
         $file = tmpfile();
         $path = $file === false ? null : (stream_get_meta_data($file)['uri'] ?? null);
 
         if ($file === false || $path === null || fwrite($file, $contents) !== strlen($contents)) {
-            throw new ThumbnailGenerationFailed('Cannot buffer the image in a temporary file.');
+            // Not ThumbnailGenerationFailed: that means "bad image" (a 422), this is a server fault.
+            throw new RuntimeException('Cannot buffer the image in a temporary file.');
         }
 
         try {
@@ -78,11 +90,15 @@ final readonly class InterventionThumbnailGenerator implements ThumbnailGenerato
             // The coder prefix stops ImageMagick from sniffing a different format out of a
             // polyglot, and "[0]" decodes only the first page: validation measured only that one.
             $image->readImage($coder.':'.$path.'[0]');
+            // Read before Intervention orients the image, which resets it to "top-left".
+            $transposed = in_array($image->getImageOrientation(), self::TRANSPOSING_ORIENTATIONS, true);
             $this->scaleDown($image);
 
-            return $this->manager->decode($image)
-                ->encode(new WebpEncoder($this->quality))
-                ->toString();
+            return new Thumbnail(
+                contents: $this->manager->decode($image)->encode(new WebpEncoder($this->quality))->toString(),
+                sourceWidth: $transposed ? $storedHeight : $storedWidth,
+                sourceHeight: $transposed ? $storedWidth : $storedHeight,
+            );
         } catch (ImageException|ImagickException $e) {
             throw ThumbnailGenerationFailed::because($e);
         } finally {
@@ -104,6 +120,23 @@ final readonly class InterventionThumbnailGenerator implements ThumbnailGenerato
         }
 
         return self::CODERS[$extension];
+    }
+
+    /**
+     * Size as stored, from the header of the first page: the same numbers the upload's
+     * dimensions rule checked. Not Imagick's, because JPEG shrink-on-load changes those.
+     *
+     * @return array{int, int}
+     */
+    private function storedSize(string $contents): array
+    {
+        $size = getimagesizefromstring($contents);
+
+        if ($size === false || $size[0] < 1 || $size[1] < 1) {
+            throw ThumbnailGenerationFailed::unreadableSize();
+        }
+
+        return [$size[0], $size[1]];
     }
 
     /**

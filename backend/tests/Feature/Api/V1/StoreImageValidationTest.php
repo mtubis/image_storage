@@ -5,17 +5,15 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Facades\Storage;
 
 // Validation of POST /api/v1/images. Files are real uploads of the committed fixtures (or
 // real images built at runtime), because the type rule sniffs file content, not the name.
 
-// Nothing is persisted yet (the controller stops at 501), but accepted requests will store
-// files, rows and a job once step 1.8 lands; isolate them now.
+// Accepted requests store files, a row and a job; isolate them.
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
-    Storage::fake();
+    fake_image_storage();
     Queue::fake();
 });
 
@@ -88,6 +86,16 @@ it('rejects a file larger than the maximum size', function (): void {
     post_image(['file' => jpeg_of_size(5120 * 1024 + 1)])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['file' => 'must not be greater than 5120 kilobytes'])
+        ->assertJsonCount(1, 'errors.file');
+});
+
+it('rejects a truncated JPEG', function (): void {
+    // Its header is intact, so type, size and dimensions pass; libjpeg would still render it.
+    $jpeg = fixture_contents('valid.jpg');
+
+    post_image(['file' => uploaded_file(substr($jpeg, 0, intdiv(strlen($jpeg), 2)), 'photo.jpg')])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['file' => 'The file is incomplete or damaged.'])
         ->assertJsonCount(1, 'errors.file');
 });
 

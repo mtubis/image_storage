@@ -3,13 +3,14 @@
 declare(strict_types=1);
 
 use App\Contracts\ThumbnailGenerator;
+use App\Data\Thumbnail;
 use App\Exceptions\ThumbnailGenerationFailed;
 use App\Services\Images\InterventionThumbnailGenerator;
 
 function thumbnail_of(string $contents): Imagick
 {
     $thumbnail = new Imagick;
-    $thumbnail->readImageBlob(resolve(ThumbnailGenerator::class)->generate($contents));
+    $thumbnail->readImageBlob(resolve(ThumbnailGenerator::class)->generate($contents)->contents);
 
     return $thumbnail;
 }
@@ -64,7 +65,7 @@ it('is bound to the Intervention implementation', function (): void {
 
 it('produces a single-frame WebP scaled down to the maximum edge', function (string $name): void {
     // Not thumbnail_of(): the raw bytes are needed for content sniffing.
-    $webp = resolve(ThumbnailGenerator::class)->generate(fixture_contents($name));
+    $webp = resolve(ThumbnailGenerator::class)->generate(fixture_contents($name))->contents;
     $thumbnail = new Imagick;
     $thumbnail->readImageBlob($webp);
 
@@ -98,6 +99,44 @@ it('applies the EXIF orientation', function (): void {
     expect([$width, $height])->toBe([313, 400])
         ->and($right['b'])->toBeGreaterThan($right['r'])
         ->and($left['r'])->toBeGreaterThan($left['b']);
+});
+
+it('reports the size of the original', function (string $name): void {
+    $thumbnail = resolve(ThumbnailGenerator::class)->generate(fixture_contents($name));
+
+    expect([$thumbnail->sourceWidth, $thumbnail->sourceHeight])->toBe([500, 500]);
+})->with(['valid.jpg', 'valid.png', 'valid.webp', 'valid.tiff', 'valid.bmp']);
+
+it('reports the size of the original as displayed', function (): void {
+    $thumbnail = resolve(ThumbnailGenerator::class)->generate(fixture_contents('exif-iptc.jpg'));
+
+    // Stored 640×500; Orientation 6 displays it as 500×640.
+    expect([$thumbnail->sourceWidth, $thumbnail->sourceHeight])->toBe([500, 640]);
+});
+
+// Not the JPEG decode size: libjpeg's shrink-on-load ("jpeg:size") changes what Imagick reports.
+it('reports the full size of a large JPEG', function (): void {
+    $thumbnail = resolve(ThumbnailGenerator::class)->generate(blank_image(2000, 1200, 'white', 'jpeg'));
+
+    expect([$thumbnail->sourceWidth, $thumbnail->sourceHeight])->toBe([2000, 1200]);
+});
+
+// Pinned, not endorsed: ImageMagick applies EXIF orientation only for JPEG and TIFF, not for
+// the eXIf chunk of PNG or the EXIF chunk of WebP. Size and thumbnail agree either way.
+it('ignores EXIF orientation in PNG and WebP for both the thumbnail and the size', function (string $format): void {
+    $image = new Imagick;
+    $image->newImage(640, 500, 'white', $format);
+    $image->setImageProfile('exif', new Imagick(fixture_path('exif-iptc.jpg'))->getImageProfile('exif'));
+    $thumbnail = resolve(ThumbnailGenerator::class)->generate($image->getImageBlob());
+
+    expect([$thumbnail->sourceWidth, $thumbnail->sourceHeight])->toBe([640, 500])
+        ->and(getimagesizefromstring($thumbnail->contents))->toMatchArray([0 => 400, 1 => 313]);
+})->with(['png', 'webp']);
+
+it('reports the size of the first page of a multi-page TIFF', function (): void {
+    $thumbnail = resolve(ThumbnailGenerator::class)->generate(fixture_contents('multipage.tiff'));
+
+    expect([$thumbnail->sourceWidth, $thumbnail->sourceHeight])->toBe([500, 500]);
 });
 
 // Thumbnails are public: camera EXIF (possibly GPS), IPTC or XMP must not leak through them.
@@ -195,9 +234,9 @@ it('decodes with a single full-size pixel cache', function (string $format): voi
     // The source's own pixels count against the same process-wide limits.
     $image->clear();
 
-    $thumbnail = with_pixel_cache_limit(24 * 1024 ** 2, fn (): string => resolve(ThumbnailGenerator::class)->generate($contents));
+    $thumbnail = with_pixel_cache_limit(24 * 1024 ** 2, fn (): Thumbnail => resolve(ThumbnailGenerator::class)->generate($contents));
 
-    expect(getimagesizefromstring($thumbnail))->toMatchArray([0 => 400, 1 => 400]);
+    expect(getimagesizefromstring($thumbnail->contents))->toMatchArray([0 => 400, 1 => 400]);
 })->with(['png', 'webp']);
 
 // Upload validation is the source of truth: a type it no longer accepts is refused here too,
@@ -213,5 +252,5 @@ it('fails with a typed exception when the pixel cache limits are exceeded', func
     $image->setImageFormat('png');
     $contents = $image->getImageBlob();
 
-    with_pixel_cache_limit(8 * 1024 ** 2, fn (): string => resolve(ThumbnailGenerator::class)->generate($contents));
+    with_pixel_cache_limit(8 * 1024 ** 2, fn (): Thumbnail => resolve(ThumbnailGenerator::class)->generate($contents));
 })->throws(ThumbnailGenerationFailed::class);

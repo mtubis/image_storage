@@ -12,6 +12,8 @@ services:
     environment:
       APP_ENV: local
       APP_TIMEZONE: UTC
+      # Base of the absolute thumbnail URLs the API returns (the nginx port on the host).
+      APP_URL: http://localhost:8000
       DB_CONNECTION: mysql
       DB_HOST: db
       DB_PORT: "3306"
