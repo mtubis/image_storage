@@ -1,5 +1,5 @@
-# Vite dev server for local development. The frontend app isn't scaffolded
-# until step 0.4; the entrypoint waits for it instead of crash-looping.
+# Vite dev server for local development; dependencies are installed by the
+# entrypoint into the bind-mounted frontend/ directory.
 FROM node:22-alpine
 
 ARG APP_UID=1000
