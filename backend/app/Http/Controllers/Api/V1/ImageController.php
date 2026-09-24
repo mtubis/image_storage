@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Images\DeleteImage;
 use App\Actions\Images\StoreImage;
 use App\Exceptions\ThumbnailGenerationFailed;
 use App\Http\Controllers\Controller;
@@ -48,5 +49,12 @@ final class ImageController extends Controller
         }
 
         return ImageResource::make($image)->response()->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    public function destroy(Image $image, DeleteImage $deleteImage): Response
+    {
+        $deleteImage->handle($image);
+
+        return response()->noContent();
     }
 }

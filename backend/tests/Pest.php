@@ -28,7 +28,8 @@ function fake_image_storage(): void
 }
 
 /**
- * An image row whose original on the fake disk holds the given fixture's bytes.
+ * An image row whose original on the fake disk holds the given fixture's bytes, with a
+ * thumbnail beside it, as an upload leaves them.
  *
  * @param  array<string, mixed>  $attributes
  */
@@ -36,6 +37,7 @@ function stored_image(string $fixture, array $attributes = []): Image
 {
     $image = Image::factory()->create($attributes);
     Storage::disk('originals')->put($image->original_path, fixture_contents($fixture));
+    Storage::disk('thumbnails')->put($image->thumbnail_path, fixture_contents('valid.webp'));
 
     return $image;
 }
