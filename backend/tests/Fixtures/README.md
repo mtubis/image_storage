@@ -33,6 +33,8 @@ metadata) fails there before it breaks anything else. In tests, reference fixtur
 - The EXIF blocks carry the tags Exif 2.32 marks as mandatory: ExifVersion, FlashpixVersion,
   ColorSpace and PixelX/YDimension. JPEG also gets YCbCrPositioning and ComponentsConfiguration.
 - **TIFF** files are RGB 8-bit, a single Adobe Deflate (`zlib`) strip, a few KB each.
+- **`multipage.tiff`** is written by Imagick itself (two images in one wand). Its TIFF coder
+  honours only the writer-level `setCompression()` for multi-image output, as with BMP.
 - **Not committed:** oversized files (> 5 MB) and images beyond the maximum resolution are
   built at runtime by `jpeg_of_size()` (a fixture padded after the JPEG EOI marker) and
   `png_of_dimensions()` in `tests/Pest.php`. Files whose name doesn't match their content (for
@@ -55,6 +57,7 @@ metadata) fails there before it breaks anything else. In tests, reference fixtur
 | `exif-iptc.tiff` | TIFF 500×500 | "camera" EXIF (below) in IFD0 + Exif sub-IFD; the same IPTC record as the JPEG in tag 33723 | TIFF metadata extraction |
 | `exif.png` | PNG 500×500 | "camera" EXIF in an `eXIf` chunk | EXIF outside JPEG/TIFF |
 | `exif.webp` | WebP 500×500 | "camera" EXIF in a `VP8X` + `EXIF` chunk | EXIF outside JPEG/TIFF |
+| `multipage.tiff` | TIFF, 2 pages: 500×500 gradient + 1200×300 flat | no metadata | `getimagesize()` sees only page 1; thumbnails must use page 1 only |
 | `not-allowed.gif` | GIF 500×500 | a real, valid image of a disallowed type | type validation |
 | `not-an-image.pdf` | PDF, 1 blank page | valid minimal PDF with a correct xref table | type validation |
 

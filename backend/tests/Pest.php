@@ -95,11 +95,29 @@ function jpeg_of_size(int $bytes): UploadedFile
 /**
  * A flat PNG of the given dimensions, built at runtime rather than committed: only the
  * header dimensions matter to the tests that use it.
+ *
+ * The app caps ImageMagick's width/height at the validation maximum (AppServiceProvider), so
+ * building an image beyond it lifts those process-wide limits for the duration of the call.
  */
 function png_of_dimensions(int $width, int $height): UploadedFile
 {
-    $image = new Imagick;
-    $image->newImage($width, $height, 'white', 'png');
+    $limits = [
+        Imagick::RESOURCETYPE_WIDTH => Imagick::getResourceLimit(Imagick::RESOURCETYPE_WIDTH),
+        Imagick::RESOURCETYPE_HEIGHT => Imagick::getResourceLimit(Imagick::RESOURCETYPE_HEIGHT),
+    ];
 
-    return uploaded_file($image->getImageBlob(), "{$width}x{$height}.png");
+    try {
+        foreach (array_keys($limits) as $type) {
+            Imagick::setResourceLimit($type, max($width, $height));
+        }
+
+        $image = new Imagick;
+        $image->newImage($width, $height, 'white', 'png');
+
+        return uploaded_file($image->getImageBlob(), "{$width}x{$height}.png");
+    } finally {
+        foreach ($limits as $type => $limit) {
+            Imagick::setResourceLimit($type, (int) $limit);
+        }
+    }
 }

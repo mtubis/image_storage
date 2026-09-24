@@ -24,8 +24,11 @@ it('allows exactly JPG, PNG, WebP, TIFF and BMP', function (): void {
     ]);
 });
 
-// Laravel 13 ships its own config/images.php (Illuminate\Image, default driver "gd") and
-// merges it into ours; GD cannot read TIFF, so the key is owned explicitly.
-it('selects the imagick driver for the framework image component', function (): void {
-    expect(config('images.default'))->toBe('imagick');
+it('bounds the thumbnail output and ImageMagick resources', function (): void {
+    expect(config('images.thumbnail_quality'))->toBe(80)
+        ->and(config('images.imagick_limits'))->toBe([
+            'memory' => 256 * 1024 ** 2,
+            'map' => 512 * 1024 ** 2,
+            'disk' => 1024 ** 3,
+        ]);
 });

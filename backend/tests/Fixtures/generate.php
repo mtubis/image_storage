@@ -363,6 +363,24 @@ writeTiff(
     cameraExifIfd(500, 500),
 );
 
+// Two pages, the second one larger and flat-coloured: getimagesize() (and so validation) only
+// sees the first page, while Imagick decodes every page unless told otherwise.
+$secondPage = new Imagick;
+$secondPage->newImage(1200, 300, '#2a9d8f');
+$secondPage->setImageDepth(8);
+
+$document = new Imagick;
+$document->addImage($square);
+$document->addImage($secondPage);
+$document->setFormat('tiff');
+foreach ($document as $page) {
+    $page->setImageFormat('tiff');
+    $page->setImageCompression(Imagick::COMPRESSION_ZIP);
+}
+// As with BMP, the TIFF coder only honours the writer-level setting for multi-image output.
+$document->setCompression(Imagick::COMPRESSION_ZIP);
+writeFixture('multipage.tiff', $document->getImagesBlob());
+
 writePdf('not-an-image.pdf');
 
 echo 'Fixtures written to '.__DIR__.PHP_EOL;

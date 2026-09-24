@@ -5,10 +5,6 @@ declare(strict_types=1);
 // Single source of truth for upload constraints, thumbnails and listing.
 return [
 
-    // Laravel 13 ships its own config/images.php for Illuminate\Image and merges it with
-    // this file, so its "default" key is owned here explicitly: GD cannot read TIFF.
-    'default' => 'imagick',
-
     // Detected MIME type => accepted file extensions. Validation rules, thumbnails and the
     // stored extension all derive from this one map.
     'allowed_types' => [
@@ -33,6 +29,20 @@ return [
 
     // Longest edge of the generated WebP thumbnail, in pixels.
     'thumbnail_max_edge' => 400,
+
+    // WebP quality (1–100) of the generated thumbnail.
+    'thumbnail_quality' => 80,
+
+    // Process-wide ImageMagick limits, in bytes, applied at boot together with max_width /
+    // max_height as width/height limits. Memory and map alone only make ImageMagick spill its
+    // pixel cache to disk; the disk limit is what finally rejects an oversized image. The sum
+    // fits one full-size copy of a 10000×10000 image (~800 MB at 16 bits per RGBA channel),
+    // which is all the thumbnail generator keeps; verified for JPEG, PNG, WebP and TIFF.
+    'imagick_limits' => [
+        'memory' => 256 * 1024 ** 2,
+        'map' => 512 * 1024 ** 2,
+        'disk' => 1024 ** 3,
+    ],
 
     'page_size' => 10,
 

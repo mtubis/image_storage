@@ -40,6 +40,8 @@ describe('format and dimensions', function (): void {
         'exif-iptc.tiff' => ['exif-iptc.tiff', 'image/tiff', 500, 500],
         'exif.png' => ['exif.png', 'image/png', 500, 500],
         'exif.webp' => ['exif.webp', 'image/webp', 500, 500],
+        // getimagesize() reports only the first page; see the multipage.tiff tests below.
+        'multipage.tiff' => ['multipage.tiff', 'image/tiff', 500, 500],
         'not-allowed.gif' => ['not-allowed.gif', 'image/gif', 500, 500],
     ]);
 
@@ -159,6 +161,18 @@ describe('exif-iptc.tiff', function (): void {
             ->and($iptc['2#005'] ?? null)->toBe(['Zażółć gęślą jaźń'])
             ->and($iptc['2#025'] ?? null)->toBe(['katowice', 'fixture', 'żółw'])
             ->and(new Imagick(fixture_path('exif-iptc.tiff'))->getImageProfiles('*', false))->toBe(['iptc']);
+    });
+});
+
+describe('multipage.tiff', function (): void {
+    it('has a larger second page that only Imagick sees', function (): void {
+        // Iterating Imagick yields the same object with a moved cursor, so read sizes in the loop.
+        $pages = [];
+        foreach (new Imagick(fixture_path('multipage.tiff')) as $page) {
+            $pages[] = [$page->getImageWidth(), $page->getImageHeight()];
+        }
+
+        expect($pages)->toBe([[500, 500], [1200, 300]]);
     });
 });
 
