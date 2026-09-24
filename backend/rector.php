@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Rector\Config\RectorConfig;
+use RectorLaravel\Rector\ArrayDimFetch\ServerVariableToRequestFacadeRector;
 use RectorLaravel\Set\LaravelSetList;
 
 return RectorConfig::configure()
@@ -26,4 +27,8 @@ return RectorConfig::configure()
         LaravelSetList::LARAVEL_CODE_QUALITY,
         LaravelSetList::LARAVEL_COLLECTION,
         LaravelSetList::LARAVEL_TYPE_DECLARATIONS,
+    ])
+    ->withSkip([
+        // Sets the process-level $_SERVER that env() reads, not the current request's server bag.
+        ServerVariableToRequestFacadeRector::class => [__DIR__.'/tests/Unit/Config/CorsConfigTest.php'],
     ]);

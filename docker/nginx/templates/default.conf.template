@@ -8,6 +8,16 @@ server {
     # so an oversized upload gets Laravel's 422, not nginx's bare 413.
     client_max_body_size 10M;
 
+    # A body over that limit never reaches Laravel. nginx's default 413 is HTML without CORS
+    # headers, which the SPA can only see as a network error; answer like Laravel instead.
+    error_page 413 @payload_too_large;
+
+    location @payload_too_large {
+        default_type application/json;
+        add_header Access-Control-Allow-Origin "${FRONTEND_URL}" always;
+        return 413 '{"message":"The POST data is too large."}';
+    }
+
     # Infra healthcheck endpoint, independent of the app (which isn't
     # scaffolded until step 0.2, so backend/public doesn't exist yet).
     location = /healthz {

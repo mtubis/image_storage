@@ -37,6 +37,8 @@
         <server name="SESSION_DRIVER" value="array"/>
         <!-- Tests fake HTTP; a local WEATHER_PROVIDER=fake must not change which class they test. -->
         <server name="WEATHER_PROVIDER" value="open-meteo"/>
+        <!-- The only CORS origin; deliberately not the dev one, so tests don't depend on it. -->
+        <server name="FRONTEND_URL" value="http://frontend.test"/>
         <server name="PULSE_ENABLED" value="false"/>
         <server name="TELESCOPE_ENABLED" value="false"/>
         <server name="NIGHTWATCH_ENABLED" value="false"/>
