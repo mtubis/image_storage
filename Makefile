@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 COMPOSE := docker compose
 
-.PHONY: up down ps logs sh-php artisan test-be test-fe lint-be lint-fe fix check e2e
+.PHONY: up down ps logs sh-php artisan test-be test-fe lint-be lint-fe build-fe fix check e2e
 
 up:
 	DOCKER_UID=$$(id -u) DOCKER_GID=$$(id -g) $(COMPOSE) up -d --build
@@ -28,6 +28,7 @@ test-fe:
 	$(COMPOSE) exec -T frontend npm run test
 
 lint-be:
+	$(COMPOSE) exec -T php composer validate --strict
 	$(COMPOSE) exec -T php vendor/bin/pint --test
 	$(COMPOSE) exec -T php vendor/bin/phpstan analyse
 	$(COMPOSE) exec -T php vendor/bin/rector --dry-run
@@ -37,13 +38,17 @@ lint-fe:
 	$(COMPOSE) exec -T frontend npm run typecheck
 	$(COMPOSE) exec -T frontend npm run format:check
 
+build-fe:
+	$(COMPOSE) exec -T frontend npm run build
+
 fix:
 	$(COMPOSE) exec -T php vendor/bin/pint
 	$(COMPOSE) exec -T php vendor/bin/rector
 	$(COMPOSE) exec -T frontend npm run lint -- --fix
 	$(COMPOSE) exec -T frontend npm run format
 
-check: lint-be test-be lint-fe test-fe
+# Mirrors the CI workflow (.github/workflows/ci.yml): green here means green there.
+check: lint-be test-be lint-fe test-fe build-fe
 
 e2e:
 	$(COMPOSE) -f docker-compose.yml -f docker-compose.e2e.yml up -d --build

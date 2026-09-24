@@ -1,0 +1,136 @@
+name: CI
+
+# Feature branches are covered by their pull request; pushes run only on main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push to the same ref makes the running workflow obsolete.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Third-party actions are pinned to commit SHAs (tags are mutable).
+jobs:
+  backend:
+    name: Backend (Pint, Larastan, Rector, Pest)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Tools run inside the same image as local development: image handling
+      # depends on the ImageMagick version and its delegates (the image ships
+      # IM 7, Ubuntu's apt ships IM 6), so a native setup-php would diverge.
+      # UID/GID match the runner user so the bind-mounted checkout stays writable.
+      - name: Resolve runner UID/GID
+        id: ids
+        run: |
+          echo "uid=$(id -u)" >> "$GITHUB_OUTPUT"
+          echo "gid=$(id -g)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build PHP image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/php/Dockerfile
+          build-args: |
+            APP_UID=${{ steps.ids.outputs.uid }}
+            APP_GID=${{ steps.ids.outputs.gid }}
+          tags: image-storage-php:ci
+          load: true
+          cache-from: type=gha,scope=php
+          cache-to: type=gha,scope=php,mode=max
+
+      - name: Cache Composer downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/composer-cache
+          key: composer-php84-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: composer-php84-
+
+      # One long-lived container, used via `docker exec` like the Makefile does
+      # with Compose. The .env bootstrap entrypoint is bypassed here because it
+      # needs vendor/; the same script runs explicitly after `composer install`.
+      # The env vars mirror docker-compose.yml, so TestEnvironmentTest proves
+      # phpunit.xml overrides them exactly as it must in the dev container.
+      - name: Start PHP container
+        run: |
+          mkdir -p "$RUNNER_TEMP/composer-cache"
+          docker run --detach --name php \
+            --volume "$GITHUB_WORKSPACE/backend:/var/www/html" \
+            --volume "$RUNNER_TEMP/composer-cache:/composer-cache" \
+            --env COMPOSER_CACHE_DIR=/composer-cache \
+            --env APP_ENV=local \
+            --env DB_CONNECTION=mysql \
+            --env QUEUE_CONNECTION=database \
+            --entrypoint sleep \
+            image-storage-php:ci infinity
+
+      - name: Validate composer.json
+        run: docker exec php composer validate --strict
+
+      - name: Install dependencies
+        run: docker exec php composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Bootstrap .env
+        run: docker exec php bootstrap-env.sh
+
+      - name: Pint
+        run: docker exec php vendor/bin/pint --test
+
+      - name: Larastan
+        run: docker exec php vendor/bin/phpstan analyse --no-progress
+
+      - name: Rector
+        run: docker exec php vendor/bin/rector --dry-run --no-progress-bar
+
+      - name: Pest
+        run: docker exec php vendor/bin/pest
+
+  frontend:
+    name: Frontend (ESLint, tsc, Prettier, Vitest, build)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Same major as the node:22-alpine dev image.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Prettier
+        run: npm run format:check
+
+      - name: Vitest
+        run: npm run test
+
+      # Repeats `tsc -b` (cheap thanks to incremental build info); the separate
+      # type-check step above keeps type errors distinct from bundling failures.
+      - name: Build
+        run: npm run build
