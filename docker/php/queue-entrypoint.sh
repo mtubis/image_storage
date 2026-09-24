@@ -11,4 +11,6 @@ done
 
 /usr/local/bin/bootstrap-env.sh
 
-exec php artisan queue:work --tries=3 --backoff=5
+# Tries, backoff and timeout are declared on each job class; worker-level flags would only
+# serve as misleading fallbacks. The job timeout needs ext-pcntl (installed in the image).
+exec php artisan queue:work

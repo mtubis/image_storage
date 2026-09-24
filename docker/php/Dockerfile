@@ -25,7 +25,7 @@ ARG PHP_EXTENSION_INSTALLER_SHA256=5e6580fc1a16832ee88cd43a96ca5c8727e2e210bee43
 ADD https://github.com/mlocati/docker-php-extension-installer/releases/download/${PHP_EXTENSION_INSTALLER_VERSION}/install-php-extensions /usr/local/bin/install-php-extensions
 RUN echo "${PHP_EXTENSION_INSTALLER_SHA256}  /usr/local/bin/install-php-extensions" | sha256sum -c - \
     && chmod +x /usr/local/bin/install-php-extensions
-RUN install-php-extensions imagick exif pdo_mysql intl zip opcache
+RUN install-php-extensions imagick exif pdo_mysql intl zip opcache pcntl
 
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/zz-app.ini
 COPY docker/php/bootstrap-env.sh /usr/local/bin/bootstrap-env.sh

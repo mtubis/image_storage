@@ -18,8 +18,8 @@ arch('contracts are interfaces')
     ->toBeInterfaces();
 
 // The HTTP *server* layer (requests, responses, uploads); adapters may use the HTTP client.
-arch('services do not depend on the HTTP layer')
-    ->expect('App\Services')
+arch('services and jobs do not depend on the HTTP layer')
+    ->expect(['App\Services', 'App\Jobs'])
     ->not->toUse(['Illuminate\Http', 'App\Http'])
     ->ignoring('Illuminate\Http\Client');
 
@@ -27,3 +27,8 @@ arch('DTOs are immutable')
     ->expect('App\Data')
     ->toBeFinal()
     ->toBeReadonly();
+
+// Consumers depend on contracts (bound in AppServiceProvider), never on a concrete adapter.
+arch('jobs depend on contracts, not adapters')
+    ->expect('App\Jobs')
+    ->not->toUse('App\Services');
