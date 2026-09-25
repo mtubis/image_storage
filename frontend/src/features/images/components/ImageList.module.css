@@ -1,0 +1,44 @@
+.heading {
+  margin-bottom: var(--space-3);
+  font-size: 1.25rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  gap: var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.end {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) 0;
+}
+
+.message {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.message:not(:empty) {
+  padding: var(--space-4) 0;
+}
+
+.error {
+  color: var(--color-danger);
+}
+
+.status {
+  color: var(--color-muted);
+}
+
+.button[aria-disabled='true'] {
+  cursor: progress;
+  opacity: 0.6;
+}
