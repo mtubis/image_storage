@@ -165,3 +165,81 @@ jobs:
       # type-check step above keeps type errors distinct from bundling failures.
       - name: Build
         run: npm run build
+
+  e2e:
+    name: E2E (Playwright against the Compose stack)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The same build args as `make e2e` (the runner's UID/GID) and as the backend job, so the
+      # PHP image is built from the backend job's cache.
+      - name: Resolve runner UID/GID
+        run: |
+          echo "DOCKER_UID=$(id -u)" >> "$GITHUB_ENV"
+          echo "DOCKER_GID=$(id -g)" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # Nothing is pushed or used from these builds: they fill the (current) buildx builder
+      # from the GHA cache, so the `up --build` in `make e2e`, which Compose runs on the same
+      # builder, finds every layer locally. A cache miss only costs time.
+      - name: Warm PHP image cache
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/php/Dockerfile
+          build-args: |
+            APP_UID=${{ env.DOCKER_UID }}
+            APP_GID=${{ env.DOCKER_GID }}
+          # Read only: the backend job writes this scope from the very same build.
+          cache-from: type=gha,scope=php
+
+      - name: Warm frontend image cache
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: docker/frontend
+          build-args: |
+            APP_UID=${{ env.DOCKER_UID }}
+            APP_GID=${{ env.DOCKER_GID }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+      # Restore only; the backend job saves this key.
+      - name: Restore Composer downloads
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/composer-cache
+          key: composer-php84-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: composer-php84-
+
+      - name: Install backend dependencies
+        run: |
+          mkdir -p "$RUNNER_TEMP/composer-cache"
+          make e2e-deps composer_cache="$RUNNER_TEMP/composer-cache"
+
+      - name: Lint E2E suite
+        run: make lint-e2e
+
+      - name: Playwright
+        run: make e2e
+
+      # Also on a timeout or cancellation: a hang is when the traces and logs matter most.
+      # Traces open with `npx playwright show-trace`, or in the HTML report.
+      - name: Upload Playwright report and traces
+        if: ${{ !success() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 14
+
+      # Server-side errors (a 500 behind a failed assertion) show up here, not in the trace.
+      - name: Stack logs
+        if: ${{ !success() }}
+        run: make e2e-logs
