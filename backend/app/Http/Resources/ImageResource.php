@@ -36,9 +36,9 @@ final class ImageResource extends JsonResource
             'mime_type' => $this->mime_type,
             /** Size of the original file in bytes. */
             'size_bytes' => $this->size_bytes,
-            /** Width of the original in pixels. */
+            /** Width of the original in pixels as displayed: the EXIF orientation of a JPEG or TIFF is applied (portrait photos stored sideways report their upright width). */
             'width' => $this->width,
-            /** Height of the original in pixels. */
+            /** Height of the original in pixels as displayed, like `width`. */
             'height' => $this->height,
             /** Absolute URL of a WebP thumbnail, also for formats browsers cannot display (TIFF). */
             'thumbnail_url' => Storage::disk('thumbnails')->url($this->thumbnail_path),

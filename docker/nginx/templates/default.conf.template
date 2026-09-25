@@ -20,8 +20,8 @@ server {
         return 413 '{"message":"The POST data is too large."}';
     }
 
-    # Infra healthcheck endpoint, independent of the app (which isn't
-    # scaffolded until step 0.2, so backend/public doesn't exist yet).
+    # Infra healthcheck endpoint, independent of the app, so nginx reports
+    # healthy even while PHP is unavailable.
     location = /healthz {
         access_log off;
         return 200 "ok";

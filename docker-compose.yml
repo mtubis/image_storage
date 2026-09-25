@@ -57,8 +57,8 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  # Runs the same image as `php`; the entrypoint waits for the Laravel app
-  # to exist (it isn't scaffolded until step 0.2) and then starts the worker.
+  # Runs the same image as `php`; the entrypoint waits for backend/artisan to
+  # appear in the bind mount and then starts the worker.
   # php's healthcheck (fpm listener on :9000) doesn't apply here, so it's
   # disabled rather than inherited as a false negative.
   queue:
@@ -103,6 +103,13 @@ services:
     volumes:
       - ./frontend:/app
     working_dir: /app
+    # Ready once Vite answers, so `up --wait` (make setup) covers the npm ci on a fresh clone.
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:5173/"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 120s
     restart: unless-stopped
 
 volumes:

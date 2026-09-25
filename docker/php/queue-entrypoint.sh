@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Entrypoint for the `queue` service (same image as `php`).
-# Laravel isn't scaffolded until step 0.2, so on a fresh checkout `artisan`
-# doesn't exist yet; wait for it instead of crash-looping the container.
+# backend/ is a bind mount; wait for `artisan` to be visible there instead of
+# crash-looping the container.
 set -euo pipefail
 
 until [ -f /var/www/html/artisan ]; do

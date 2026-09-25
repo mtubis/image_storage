@@ -167,7 +167,7 @@ it('keeps the ICC colour profile', function (): void {
 
 // Pinned, not endorsed: a CMYK source is converted to sRGB without its ICC profile, so colours
 // shift (#e03030 comes out close to #ed0002). The CMYK profile must not stay attached to RGB
-// pixels. ICC-managed conversion needs a bundled sRGB profile (see PLAN.md Decision log).
+// pixels. ICC-managed conversion needs a bundled sRGB profile (see docs/DECISIONS.md, Known limitations).
 it('converts a CMYK source to sRGB and drops its CMYK profile', function (): void {
     $image = new Imagick;
     $image->newImage(600, 600, '#e03030', 'jpeg');
@@ -205,6 +205,10 @@ it('rejects input that is not a decodable image', function (string $contents): v
     'empty' => '',
     'plain text' => 'not an image',
     'truncated PNG' => fn (): string => substr(fixture_contents('valid.png'), 0, 1000),
+    // Unlike JPEG (below), their decoders fail on missing pixel data, so no structural check is needed.
+    'truncated WebP' => fn (): string => substr($contents = fixture_contents('valid.webp'), 0, intdiv(strlen($contents), 2)),
+    'truncated TIFF' => fn (): string => substr($contents = fixture_contents('valid.tiff'), 0, intdiv(strlen($contents), 2)),
+    'truncated BMP' => fn (): string => substr($contents = fixture_contents('valid.bmp'), 0, intdiv(strlen($contents), 2)),
 ])->throws(ThumbnailGenerationFailed::class);
 
 // libjpeg reports a missing tail only as a warning and pads the missing rows with grey, like

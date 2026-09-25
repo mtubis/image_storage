@@ -37,9 +37,10 @@ RUN chmod +x /usr/local/bin/bootstrap-env.sh /usr/local/bin/php-entrypoint.sh /u
 # in backend/ stay owned by the developer, not root. storage/app is hidden by
 # the bind mount in development; the E2E stack mounts a volume over it, and
 # Docker seeds an empty volume with this directory's owner, so uploads there
-# are writable.
-RUN groupmod -g "${APP_GID}" www-data \
-    && usermod -u "${APP_UID}" -g "${APP_GID}" www-data \
+# are writable. `-o` allows an ID that another account already has: macOS users
+# are in group 20 (staff), which is dialout in Debian.
+RUN groupmod -o -g "${APP_GID}" www-data \
+    && usermod -o -u "${APP_UID}" -g "${APP_GID}" www-data \
     && mkdir -p /var/www/html/storage/app/public /var/www/html/storage/app/private \
     && chown -R www-data:www-data /var/www/html
 
