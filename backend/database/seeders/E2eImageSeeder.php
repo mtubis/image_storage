@@ -23,8 +23,9 @@ final class E2eImageSeeder extends Seeder
 
     public function run(StoreImage $storeImage): void
     {
+        $images = [];
         for ($number = 1; $number <= self::COUNT; $number++) {
-            $storeImage->handle(new StoreImageData(
+            $images[$number] = $storeImage->handle(new StoreImageData(
                 contents: $this->jpeg($number),
                 originalName: sprintf('seed-%02d.jpg', $number),
                 mimeType: 'image/jpeg',
@@ -32,6 +33,15 @@ final class E2eImageSeeder extends Seeder
                 uploaderName: 'E2E Seeder',
                 uploaderEmail: 'e2e-seeder@example.com',
             ));
+        }
+
+        // The list scenarios need seed-01 oldest and seed-15 newest, a second apart. Upload times
+        // from the wall clock can't promise that: it may step back while seeding (a time sync on
+        // WSL 2 did). One reading, taken last, also keeps every seed older than later uploads.
+        $newest = now();
+        foreach ($images as $number => $image) {
+            $image->created_at = $newest->subSeconds(self::COUNT - $number);
+            $image->save();
         }
     }
 

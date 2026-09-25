@@ -80,6 +80,16 @@ function card(name: string) {
   return screen.getByRole('article', { name });
 }
 
+// A promise the test resolves when it chooses, to order events without relying on timing.
+function gate(): { passed: Promise<void>; open: () => void } {
+  let open = (): void => undefined;
+  const passed = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+
+  return { passed, open };
+}
+
 async function settle() {
   await new Promise((resolve) => setTimeout(resolve, 50));
 }
@@ -331,6 +341,8 @@ describe('ImageList delete', () => {
     const observer = stubIntersectionObserver();
     const firstPage = [makeImagePayload({ original_name: 'a.jpg' }), ...makeImagePayloads(9)];
     const secondPage = [makeImagePayload({ original_name: 'x.jpg' })];
+    const nextPageRequested = gate();
+    const nextPageAnswered = gate();
     server.use(
       // The first answer still contains the image; later ones come after the deletion.
       http.get(IMAGES_URL, () => HttpResponse.json(makeImagePagePayload(firstPage, 'page-2')), {
@@ -338,8 +350,9 @@ describe('ImageList delete', () => {
       }),
       http.get(IMAGES_URL, async ({ request }) => {
         if (new URL(request.url).searchParams.get('cursor') === 'page-2') {
-          // Still loading when the DELETE (20 ms) has finished.
-          await delay(100);
+          // Held until the deletion has finished, so it lands after it.
+          nextPageRequested.open();
+          await nextPageAnswered.passed;
 
           return HttpResponse.json(makeImagePagePayload(secondPage));
         }
@@ -352,8 +365,13 @@ describe('ImageList delete', () => {
     expect(await screen.findAllByRole('article')).toHaveLength(10);
 
     observer.setIntersecting(true);
+    await nextPageRequested.passed;
     await user.click(screen.getByRole('button', { name: 'Delete a.jpg' }));
     await user.click(screen.getByRole('button', { name: 'Yes, delete' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('article', { name: 'a.jpg' })).not.toBeInTheDocument();
+    });
+    nextPageAnswered.open();
 
     expect(await screen.findByRole('article', { name: 'x.jpg' })).toBeInTheDocument();
     await settle();
@@ -368,15 +386,21 @@ describe('ImageList delete', () => {
       makeImagePayload({ original_name: 'a.jpg' }),
       makeImagePayload({ original_name: 'b.jpg' }),
     ];
-    // Initial load, then a refetch from before the deletion, then any later refetch.
+    // Initial load, then a refetch from before the deletion (held until the deletion has
+    // finished, so it lands after it), then any later refetch.
+    const staleRefetchRequested = gate();
+    const staleRefetchAnswered = gate();
     const answers = [
-      { images: [first, second], wait: 0 },
-      { images: [uploaded, first, second], wait: 100 },
+      { images: [first, second], held: false },
+      { images: [uploaded, first, second], held: true },
     ];
     server.use(
       http.get(IMAGES_URL, async () => {
-        const answer = answers.shift() ?? { images: [uploaded, second], wait: 0 };
-        await delay(answer.wait);
+        const answer = answers.shift() ?? { images: [uploaded, second], held: false };
+        if (answer.held) {
+          staleRefetchRequested.open();
+          await staleRefetchAnswered.passed;
+        }
 
         return HttpResponse.json(makeImagePagePayload(answer.images));
       }),
@@ -388,7 +412,12 @@ describe('ImageList delete', () => {
     await user.click(screen.getByRole('button', { name: 'Delete a.jpg' }));
     // What an upload does when it settles.
     void queryClient.invalidateQueries({ queryKey: imageKeys.list() });
+    await staleRefetchRequested.passed;
     await user.click(screen.getByRole('button', { name: 'Yes, delete' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('article', { name: 'a.jpg' })).not.toBeInTheDocument();
+    });
+    staleRefetchAnswered.open();
 
     expect(await screen.findByRole('article', { name: 'new.jpg' })).toBeInTheDocument();
     await settle();

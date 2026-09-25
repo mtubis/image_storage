@@ -12,7 +12,6 @@ use Imagick;
 use ImagickException;
 use Intervention\Image\Drivers\Imagick\Driver;
 use Intervention\Image\Encoders\WebpEncoder;
-use Intervention\Image\Exceptions\ImageException;
 use Intervention\Image\ImageManager;
 use RuntimeException;
 use Symfony\Component\Mime\MimeTypes;
@@ -93,17 +92,20 @@ final readonly class InterventionThumbnailGenerator implements ThumbnailGenerato
             // Read before Intervention orients the image, which resets it to "top-left".
             $transposed = in_array($image->getImageOrientation(), self::TRANSPOSING_ORIENTATIONS, true);
             $this->scaleDown($image);
-
-            return new Thumbnail(
-                contents: $this->manager->decode($image)->encode(new WebpEncoder($this->quality))->toString(),
-                sourceWidth: $transposed ? $storedHeight : $storedWidth,
-                sourceHeight: $transposed ? $storedWidth : $storedHeight,
-            );
-        } catch (ImageException|ImagickException $e) {
+        } catch (ImagickException $e) {
+            // Decoding (and the resource limits it hits) is where a file shows it's damaged.
             throw ThumbnailGenerationFailed::because($e);
         } finally {
             fclose($file);
         }
+
+        // Past the decode, the image is small and valid: a failure from here on (a missing WebP
+        // delegate, a policy, configuration) is the server's, so it isn't mapped to a 422.
+        return new Thumbnail(
+            contents: $this->manager->decode($image)->encode(new WebpEncoder($this->quality))->toString(),
+            sourceWidth: $transposed ? $storedHeight : $storedWidth,
+            sourceHeight: $transposed ? $storedWidth : $storedHeight,
+        );
     }
 
     /**

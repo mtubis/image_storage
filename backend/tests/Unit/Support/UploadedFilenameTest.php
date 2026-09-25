@@ -14,6 +14,8 @@ it('makes the client file name storable and safe to display', function (string $
     'bidi override' => ["invoice\u{202E}gpj.jpg", 'invoicegpj.jpg'],
     'bidi isolates and marks' => ["a\u{2066}b\u{2069}c\u{200F}.jpg", 'abc.jpg'],
     'Arabic letter mark' => ["a\u{061C}b.jpg", 'ab.jpg'],
+    // Displayed as line breaks, like LF.
+    'line and paragraph separators' => ["a\u{2028}b\u{2029}c.jpg", 'abc.jpg'],
     // Format characters other than bidi controls occur in real names (Persian, Indic scripts).
     'zero-width non-joiner' => ["می\u{200C}خواهم.jpg", "می\u{200C}خواهم.jpg"],
     'surrounding whitespace' => ['  photo.jpg ', 'photo.jpg'],
@@ -40,5 +42,6 @@ it('shortens a long name to the column length, keeping a short extension', funct
 
 it('lists the characters it strips as a regex character class', function (): void {
     expect(preg_match('/['.UploadedFilename::UNSAFE_CHARACTERS.']/u', "a\u{202E}b"))->toBe(1)
+        ->and(preg_match('/['.UploadedFilename::UNSAFE_CHARACTERS.']/u', "a\u{2028}b"))->toBe(1)
         ->and(preg_match('/['.UploadedFilename::UNSAFE_CHARACTERS.']/u', "a\u{200C}b"))->toBe(0);
 });

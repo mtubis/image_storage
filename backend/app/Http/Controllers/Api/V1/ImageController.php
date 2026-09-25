@@ -65,7 +65,8 @@ final class ImageController extends Controller
         } catch (ThumbnailGenerationFailed $exception) {
             // A damaged body behind a valid header only shows up when decoding. The client gets
             // a generic message; ImageMagick's text stays in the log, where a server-side cause
-            // (a missing delegate, too tight resource limits) would otherwise go unnoticed.
+            // (a missing decode delegate, too tight resource limits) would otherwise go unnoticed.
+            // Failures after decoding (e.g. the WebP encoder) are not mapped: they are a 500.
             Log::warning('An uploaded image could not be decoded.', ['reason' => $exception->getMessage()]);
 
             throw ValidationException::withMessages(['file' => trans(CompleteJpeg::MESSAGE, ['attribute' => 'file'])]);

@@ -11,9 +11,8 @@ async function boxOf(locator: Locator): Promise<{ width: number; height: number 
 }
 
 // Rely on the seeded data (make e2e): seed-01 … seed-15, more than one page of 10, alternating
-// 800 × 600 and 600 × 800. seed-01 is the oldest: seeded within one second, ties in `created_at`
-// are broken by the ULID, which is monotonic within the seeding process. Other tests delete what
-// they store, so the seeded images stay the first 15.
+// 800 × 600 and 600 × 800. The seeder dates them a second apart, seed-01 oldest, all before any
+// test starts. Other tests delete what they store, so the seeded images stay the first 15.
 
 test('scrolling to the end loads the next page', async ({ page }) => {
   const nextPages: string[] = [];

@@ -37,8 +37,8 @@ final readonly class StoreImage
      */
     public function handle(StoreImageData $data): Image
     {
-        // Everything that can reject the file runs before anything is written.
-        $thumbnail = $this->thumbnails->generate($data->contents);
+        // Everything that can reject the file runs before anything is written, the cheap metadata
+        // check first: decoding a large image takes seconds.
         $metadata = $this->metadata->extract($data->contents);
 
         $image = new Image([
@@ -46,13 +46,15 @@ final readonly class StoreImage
             'extension' => $data->extension,
             'mime_type' => $data->mimeType,
             'size_bytes' => strlen($data->contents),
-            'width' => $thumbnail->sourceWidth,
-            'height' => $thumbnail->sourceHeight,
             'uploader_name' => $data->uploaderName,
             'uploader_email' => $data->uploaderEmail,
             'metadata' => $metadata->isEmpty() ? null : $metadata->toArray(),
         ]);
         $this->assertMetadataFits($image);
+
+        $thumbnail = $this->thumbnails->generate($data->contents);
+        $image->width = $thumbnail->sourceWidth;
+        $image->height = $thumbnail->sourceHeight;
 
         // The ID is known before the row exists, so the stored files can be named after it:
         // the client's file name never reaches the filesystem.

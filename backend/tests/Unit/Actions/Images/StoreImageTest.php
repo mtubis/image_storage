@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\Images\StoreImage;
+use App\Contracts\ThumbnailGenerator;
 use App\Data\StoreImageData;
 use App\Exceptions\MetadataTooLarge;
 use App\Exceptions\ThumbnailGenerationFailed;
@@ -105,6 +106,16 @@ it('accepts metadata up to the configured size and stores nothing beyond it', fu
         ->and(Storage::disk('thumbnails')->allFiles())->toHaveCount(2);
 
     Queue::assertPushed(FetchImageTemperature::class, 2);
+});
+
+// The size check is cheap and decoding is not (seconds for a 10000² image): crafted metadata is
+// rejected before any pixel is decoded.
+it('checks the metadata size before generating the thumbnail', function (): void {
+    config(['images.max_metadata_bytes' => 1]);
+    $this->mock(ThumbnailGenerator::class)->shouldNotReceive('generate');
+
+    expect(fn (): Image => resolve(StoreImage::class)->handle(store_image_data('exif-iptc.jpg')))
+        ->toThrow(MetadataTooLarge::class);
 });
 
 it('queues fetching the temperature for the stored image', function (): void {

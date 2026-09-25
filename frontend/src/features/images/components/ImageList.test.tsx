@@ -180,7 +180,7 @@ describe('ImageList', () => {
     const { queryClient } = renderWithProviders(<ImageList />);
     await screen.findAllByRole('article');
 
-    // E.g. after an upload (3.3); not awaited, the refetch is held until finishRefetch().
+    // E.g. the invalidation after an upload; not awaited, the refetch is held until finishRefetch().
     act(() => {
       void queryClient.invalidateQueries({ queryKey: imageKeys.list() });
     });
@@ -254,6 +254,8 @@ describe('ImageList', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
 
+    // The button goes with the error; the focus must not fall back to <body>.
+    expect(screen.getByRole('heading', { name: 'Uploaded images' })).toHaveFocus();
     expect(await screen.findAllByRole('article')).toHaveLength(2);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });

@@ -34,9 +34,11 @@ services:
     restart: unless-stopped
 
   nginx:
-    image: nginx:1.27-alpine
+    image: nginx:1.28-alpine
     ports:
-      - "8000:80"
+      # Loopback-only, like db and frontend: an unauthenticated API with upload and delete
+      # should not be reachable from the LAN.
+      - "127.0.0.1:8000:80"
     volumes:
       - ./backend:/var/www/html:ro
       # The image's entrypoint renders templates/*.template into conf.d with envsubst.
@@ -57,7 +59,7 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  # Runs the same image as `php`; the entrypoint waits for backend/artisan to
+  # Runs the same image as `php`; the entrypoint waits for backend/vendor to
   # appear in the bind mount and then starts the worker.
   # php's healthcheck (fpm listener on :9000) doesn't apply here, so it's
   # disabled rather than inherited as a false negative.
@@ -78,8 +80,9 @@ services:
     volumes:
       - db-data:/var/lib/mysql
     ports:
-      # Loopback-only: convenient for a local GUI client, not reachable from the LAN.
-      - "127.0.0.1:3306:3306"
+      # Loopback-only, for a local GUI client. Not 3306 (a local MySQL/MariaDB) nor 33060
+      # (MySQL 8's X Protocol); the containers still reach it as db:3306.
+      - "127.0.0.1:13306:3306"
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
@@ -95,7 +98,7 @@ services:
         APP_UID: ${DOCKER_UID:-1000}
         APP_GID: ${DOCKER_GID:-1000}
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     environment:
       # Read by Vite from the process environment; the browser calls the API on the host port.
       # Fixed like APP_URL and FRONTEND_URL, which it must agree with (CORS, absolute URLs).
@@ -109,7 +112,9 @@ services:
       interval: 5s
       timeout: 3s
       retries: 12
-      start_period: 120s
+      # Generous for a first npm ci into a bind mount (slow on Docker Desktop for macOS);
+      # a healthy check ends the start period early, so it costs nothing otherwise.
+      start_period: 300s
     restart: unless-stopped
 
 volumes:

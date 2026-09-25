@@ -17,9 +17,12 @@ use App\Services\Weather\FakeWeatherProvider;
 use App\Services\Weather\OpenMeteoWeatherProvider;
 use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Scramble;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Imagick;
 use InvalidArgumentException;
@@ -78,6 +81,11 @@ final class AppServiceProvider extends ServiceProvider
 
         $this->limitImagickResources();
 
+        // Uploads are the expensive requests (decoding, thumbnails) and nothing authenticates
+        // the client, so they are limited per IP address.
+        RateLimiter::for('uploads', static fn (Request $request): Limit => Limit::perMinute(config()->integer('images.uploads_per_minute'))
+            ->by((string) $request->ip()));
+
         // Scramble shows the docs outside "local" only to whom this gate allows. The API has no
         // authentication, so the document reveals nothing the API itself doesn't: allow everyone.
         Gate::define('viewApiDocs', static fn (?object $user = null): bool => true);
@@ -90,7 +98,7 @@ final class AppServiceProvider extends ServiceProvider
     /**
      * Validation reads dimensions from the header of the first page only, so these limits are
      * the real bound on what ImageMagick decodes: later TIFF pages and the total pixel area.
-     * They are process-wide, so they also cover any other Imagick use (metadata extraction).
+     * They are process-wide, so they also cover any later Imagick use.
      */
     private function limitImagickResources(): void
     {

@@ -181,3 +181,24 @@ it('answers with a JSON 500 and stores nothing when persisting fails', function 
         ->and(Storage::disk('thumbnails')->allFiles())->toBe([]);
     Queue::assertNothingPushed();
 });
+
+// Every upload may cost seconds of CPU and hundreds of MB of pixel cache, and nothing
+// authenticates the client: uploads are limited per IP address. Counted before validation, so
+// rejected attempts count too.
+it('limits uploads per client and answers the excess with a readable JSON 429', function (): void {
+    config(['images.uploads_per_minute' => 2]);
+    $origin = ['Origin' => 'http://frontend.test', 'Accept' => 'application/json'];
+
+    $this->post('/api/v1/images', [], $origin)->assertUnprocessable();
+    $this->post('/api/v1/images', [], $origin)->assertUnprocessable();
+
+    $this->post('/api/v1/images', [], $origin)
+        ->assertTooManyRequests()
+        ->assertHeader('Retry-After')
+        ->assertHeader('Access-Control-Allow-Origin', 'http://frontend.test')
+        ->assertJsonPath('message', 'Too Many Attempts.');
+    // Another client is not affected.
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.7'])
+        ->post('/api/v1/images', [], $origin)
+        ->assertUnprocessable();
+});

@@ -1,6 +1,8 @@
 # PHP 8.4-FPM with the extensions the app needs (imagick for TIFF-capable
 # thumbnailing, exif for metadata, pdo_mysql, intl, zip, opcache).
-FROM php:8.4-fpm
+# Debian release pinned: it decides the ImageMagick version (trixie: 7.1; bookworm had 6),
+# which the thumbnail and metadata behaviour is verified against.
+FROM php:8.4-fpm-trixie
 
 ARG APP_UID=1000
 ARG APP_GID=1000

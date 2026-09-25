@@ -58,3 +58,22 @@ it('seeds images that pass the upload constraints', function (): void {
             ->and($image->size_bytes)->toBeLessThanOrEqual(config()->integer('images.max_size_kb') * 1024);
     });
 });
+
+// The E2E list scenarios rely on seed-15 being the newest and seed-01 the oldest. The wall clock
+// can step back while seeding (seen on WSL 2 after a time sync), which reordered the list.
+it('orders the seeded images by number even when the clock steps back while seeding', function (): void {
+    $this->freezeTime();
+    Image::creating(function (): void {
+        $this->travel(-1)->seconds();
+    });
+
+    $this->seed(E2eImageSeeder::class);
+
+    $newestFirst = array_map(
+        static fn (int $number): string => sprintf('seed-%02d.jpg', $number),
+        range(E2eImageSeeder::COUNT, 1),
+    );
+    expect(Image::forListing()->pluck('original_name')->all())->toBe($newestFirst)
+        // In the past: whatever the E2E tests upload afterwards is newer.
+        ->and(Image::query()->latest()->firstOrFail()->created_at?->lessThanOrEqualTo(now()))->toBeTrue();
+});

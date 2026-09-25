@@ -3,19 +3,6 @@
 declare(strict_types=1);
 
 return [
-
-    /*
-    |--------------------------------------------------------------------------
-    | Third Party Services
-    |--------------------------------------------------------------------------
-    |
-    | This file is for storing the credentials for third party services such
-    | as Resend, Postmark, AWS, and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
-    |
-    */
-
     // "fake" returns a constant temperature without network access (E2E, local work offline).
     'weather' => [
         'provider' => env('WEATHER_PROVIDER', 'open-meteo'),
