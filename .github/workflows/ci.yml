@@ -112,15 +112,18 @@ jobs:
       - name: Rector
         run: docker exec php vendor/bin/rector --dry-run --no-progress-bar
 
-      # Fails when Scramble cannot infer part of the API documentation.
-      - name: API documentation
-        run: docker exec php php artisan scramble:analyze
-
       - name: Pest
         run: docker exec php vendor/bin/pest
 
       - name: Wait for MariaDB
         run: timeout 120 sh -c 'until [ "$(docker inspect -f "{{.State.Health.Status}}" db)" = healthy ]; do sleep 2; done'
+
+      # Scramble infers the model's attribute types from the database schema, so it needs a
+      # migrated database; CI has only the test one (the dev database exists locally only).
+      - name: API documentation
+        run: |
+          docker exec --env DB_DATABASE=image_storage_testing php php artisan migrate --force --no-interaction
+          docker exec --env DB_DATABASE=image_storage_testing php php artisan scramble:analyze
 
       # The same suite on the production database engine (collation, strict mode,
       # TIMESTAMP time zones, max_allowed_packet), which in-memory SQLite can't show.
