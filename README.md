@@ -37,7 +37,7 @@ deployed on separate servers.
 
 **Requirements:** Linux, macOS or Windows with WSL 2; Docker with Compose v2.24.4 or newer,
 GNU Make and Bash. PHP, Composer and Node.js are not needed on the host: everything runs in
-containers. Ports 8000, 5173 and 3306 must be free (and 8001, 5174 for the E2E suite).
+containers. Ports 8000, 5173 and 13306 must be free (and 8001, 5174 for the E2E suite).
 
 ```bash
 git clone https://github.com/mtubis/image_storage.git
@@ -85,9 +85,9 @@ The first run of either pulls the Playwright image (about 2.5 GB unpacked) and i
 | Service | Image / role | Port |
 |---|---|---|
 | `nginx` | Serves the API and public thumbnails; upload limit 10 MB | 8000 |
-| `php` | PHP 8.4-FPM with Imagick (ImageMagick 7.1), exif, pcntl | – |
+| `php` | PHP 8.4-FPM (Debian trixie) with Imagick (ImageMagick 7.1), exif, pcntl | – |
 | `queue` | The same image running `artisan queue:work` (temperature job) | – |
-| `db` | MariaDB 11 | 127.0.0.1:3306 |
+| `db` | MariaDB 11 (for a local client; containers use `db:3306`) | 127.0.0.1:13306 |
 | `frontend` | Vite dev server | 5173 |
 
 ## Architecture
@@ -222,6 +222,8 @@ An image in the API:
 - `422` for an invalid cursor.
 - `413` from nginx for bodies over 10 MB. Files between 5 and 10 MB get a `422` with a field
   error.
+- `429` after more than 30 uploads per minute from one IP address (`images.uploads_per_minute`),
+  with a `Retry-After` header.
 
 ### Stored metadata
 
@@ -291,8 +293,8 @@ For a deployment on separate servers:
 
 **Backend** (PHP 8.4 with `imagick`, `exif`, `intl`, `pdo_mysql`, `pcntl`; ImageMagick 7).
 `docker/php/Dockerfile`, `docker/php/php.ini` and `docker/nginx/templates/default.conf.template`
-are the reference configuration: upload limits, the JSON `413`, and caching headers for
-thumbnails.
+are the reference configuration: upload limits, the JSON `413`, caching headers for
+thumbnails, and PHP errors logged to stderr instead of displayed.
 
 | Variable | Purpose |
 |---|---|
@@ -302,10 +304,17 @@ thumbnails.
 | `DB_CONNECTION=mariadb`, `DB_*` | Database |
 | `QUEUE_CONNECTION` | `database` (a `queue:work` process must run) or `sync` |
 | `WEATHER_PROVIDER` | `open-meteo` (default) or `fake` (no network, fixed value) |
+| `UPLOADS_PER_MINUTE` | Upload rate limit per client IP address (default 30) |
 
-- Upload limits, thumbnail size, ImageMagick resource limits and page size are in
-  `backend/config/images.php`. The Open-Meteo URL, coordinates and timeouts are in
+- Upload limits, the upload rate limit, thumbnail size, ImageMagick resource limits and page
+  size are in `backend/config/images.php`. The Open-Meteo URL, coordinates and timeouts are in
   `backend/config/services.php`.
+- Behind a load balancer or reverse proxy, trust it (`->withMiddleware(fn ($middleware) =>
+  $middleware->trustProxies(at: …))` in `bootstrap/app.php`); otherwise every client has the
+  proxy's IP address and they all share one upload rate limit.
+- The nginx template resolves `php` through Docker's DNS (`resolver 127.0.0.11`), which exists
+  only on Docker networks. Outside Docker, use a literal `fastcgi_pass` address or an `upstream`
+  block instead.
 - PHP's `upload_max_filesize` / `post_max_size` and the web server's body limit must be above
   5 MB (10 MB here), so an oversized file gets a validation error rather than a bare `413`.
 - On each deploy:
@@ -369,7 +378,8 @@ See [docs/DECISIONS.md](docs/DECISIONS.md#known-limitations).
   delete.
 - **S3-compatible object storage** for originals, with pre-signed download URLs and thumbnails
   behind a CDN. The Filesystem abstraction already isolates storage.
-- **Rate limiting** of uploads and downloads per client.
+- **Finer rate limiting**: per user once there is authentication, and for downloads, which are
+  cheap for PHP but can use a lot of bandwidth (uploads are already limited per IP).
 - **Malware scanning** (e.g. ClamAV) of uploads before they are stored or served.
 - **Duplicate detection** by content hash (exact) or perceptual hash (near-duplicates).
 - **Metadata search**: normalised, indexed fields (camera, date taken, GPS, IPTC keywords)
@@ -383,13 +393,11 @@ See [docs/DECISIONS.md](docs/DECISIONS.md#known-limitations).
 
 ## Troubleshooting
 
-- **`502 Bad Gateway` after rebuilding only the `php` service**: nginx resolves `php` once at
-  start. Run `docker compose restart nginx`.
 - **nginx's HTML `404` for every API URL after a restart of Docker Desktop or WSL**: the
   containers started before the project directory was available, so their bind mounts are
   empty (`php artisan` reports "Could not open input file"). Recreate them with
   `make down && make up`; `make up` alone keeps the running containers.
-- **A port is already in use**: stop whatever uses 8000, 5173 or 3306, or change the host port
+- **A port is already in use**: stop whatever uses 8000, 5173 or 13306, or change the host port
   in a `docker-compose.override.yml`. `VITE_API_URL`, `APP_URL` and `FRONTEND_URL` (set for
   both `php` and `nginx`) must then match.
 - **Files in `backend/` or `frontend/` owned by root**: the containers run as your UID/GID only

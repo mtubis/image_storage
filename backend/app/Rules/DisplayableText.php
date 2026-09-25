@@ -14,13 +14,14 @@ use Illuminate\Contracts\Validation\ValidationRule;
  *
  * A rule object rather than a "regex:" string: Scramble would publish the PCRE character class
  * as an OpenAPI pattern, which ECMA-262 validators misread. The /u flag also makes invalid
- * UTF-8 fail here instead of later as a 500 (DB "Incorrect string value").
+ * UTF-8 fail here instead of later as a 500 (DB "Incorrect string value"). \z, not $, which
+ * would also match before a final line feed.
  */
 final readonly class DisplayableText implements ValidationRule
 {
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if (! is_string($value) || preg_match('/^[^'.UploadedFilename::UNSAFE_CHARACTERS.']+$/u', $value) !== 1) {
+        if (! is_string($value) || preg_match('/^[^'.UploadedFilename::UNSAFE_CHARACTERS.']+\z/u', $value) !== 1) {
             $fail('validation.regex')->translate();
         }
     }

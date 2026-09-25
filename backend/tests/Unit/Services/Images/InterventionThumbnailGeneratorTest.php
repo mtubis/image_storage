@@ -6,6 +6,7 @@ use App\Contracts\ThumbnailGenerator;
 use App\Data\Thumbnail;
 use App\Exceptions\ThumbnailGenerationFailed;
 use App\Services\Images\InterventionThumbnailGenerator;
+use Intervention\Image\Exceptions\InvalidArgumentException;
 
 function thumbnail_of(string $contents): Imagick
 {
@@ -13,6 +14,21 @@ function thumbnail_of(string $contents): Imagick
     $thumbnail->readImageBlob(resolve(ThumbnailGenerator::class)->generate($contents)->contents);
 
     return $thumbnail;
+}
+
+/**
+ * exif-iptc.jpg's pixels (stored 640×500, Orientation 6) as a TIFF, whose writer stores the
+ * orientation in the TIFF's own tag 274.
+ */
+// Called eagerly in datasets: Rector turns `fn () => rotated_tiff()` into `rotated_tiff(...)`,
+// which Pest cannot bind.
+function rotated_tiff(): string
+{
+    $image = new Imagick(fixture_path('exif-iptc.jpg'));
+    $image->setImageFormat('tiff');
+    $image->setImageOrientation(Imagick::ORIENTATION_RIGHTTOP);
+
+    return $image->getImageBlob();
 }
 
 function blank_image(int $width, int $height, string $background, string $format): string
@@ -88,8 +104,8 @@ it('never upscales a smaller image', function (): void {
 
 // exif-iptc.jpg is stored 640×500 with Orientation 6 (rotate 90° clockwise to display), and
 // its gradient runs from blue at the stored top to orange at the stored bottom.
-it('applies the EXIF orientation', function (): void {
-    $thumbnail = thumbnail_of(fixture_contents('exif-iptc.jpg'));
+it('applies the stored orientation', function (string $contents): void {
+    $thumbnail = thumbnail_of($contents);
     $width = $thumbnail->getImageWidth();
     $height = $thumbnail->getImageHeight();
     $left = $thumbnail->getImagePixelColor(2, intdiv($height, 2))->getColor();
@@ -99,7 +115,10 @@ it('applies the EXIF orientation', function (): void {
     expect([$width, $height])->toBe([313, 400])
         ->and($right['b'])->toBeGreaterThan($right['r'])
         ->and($left['r'])->toBeGreaterThan($left['b']);
-});
+})->with([
+    'JPEG' => fn (): string => fixture_contents('exif-iptc.jpg'),
+    'TIFF' => rotated_tiff(),
+]);
 
 it('reports the size of the original', function (string $name): void {
     $thumbnail = resolve(ThumbnailGenerator::class)->generate(fixture_contents($name));
@@ -107,12 +126,15 @@ it('reports the size of the original', function (string $name): void {
     expect([$thumbnail->sourceWidth, $thumbnail->sourceHeight])->toBe([500, 500]);
 })->with(['valid.jpg', 'valid.png', 'valid.webp', 'valid.tiff', 'valid.bmp']);
 
-it('reports the size of the original as displayed', function (): void {
-    $thumbnail = resolve(ThumbnailGenerator::class)->generate(fixture_contents('exif-iptc.jpg'));
+it('reports the size of the original as displayed', function (string $contents): void {
+    $thumbnail = resolve(ThumbnailGenerator::class)->generate($contents);
 
     // Stored 640×500; Orientation 6 displays it as 500×640.
     expect([$thumbnail->sourceWidth, $thumbnail->sourceHeight])->toBe([500, 640]);
-});
+})->with([
+    'JPEG' => fn (): string => fixture_contents('exif-iptc.jpg'),
+    'TIFF' => rotated_tiff(),
+]);
 
 // Not the JPEG decode size: libjpeg's shrink-on-load ("jpeg:size") changes what Imagick reports.
 it('reports the full size of a large JPEG', function (): void {
@@ -219,6 +241,16 @@ it('renders a truncated JPEG leniently instead of failing', function (): void {
     $thumbnail = thumbnail_of(substr($jpeg, 0, intdiv(strlen($jpeg), 2)));
 
     expect([$thumbnail->getImageWidth(), $thumbnail->getImageHeight()])->toBe([400, 400]);
+});
+
+// ThumbnailGenerationFailed means "the file is at fault" (a 422). Once the image is decoded, a
+// failure is the server's (a missing WebP delegate, a policy, configuration), which must surface
+// as a reported 500, not as "damaged file". An out-of-range quality makes the encoder throw.
+it('lets an encoding failure through as a server fault', function (): void {
+    $generator = new InterventionThumbnailGenerator(maxEdge: 400, quality: 101, allowedExtensions: ['jpg']);
+
+    expect(fn (): Thumbnail => $generator->generate(fixture_contents('valid.jpg')))
+        ->toThrow(InvalidArgumentException::class);
 });
 
 // ImageMagick decodes far more than the allowed formats (GIF, PDF via Ghostscript, SVG…),

@@ -12,11 +12,12 @@ namespace App\Support;
 final class UploadedFilename
 {
     /**
-     * A regex character class (without brackets): control characters, plus the bidirectional
-     * controls (ALM, LRM/RLM, embeddings, overrides, isolates) that make "photo\u{202E}gpj.exe"
-     * display as "photoexe.jpg". Other format characters, such as ZWNJ, occur in real names.
+     * A regex character class (without brackets): control characters, the line and paragraph
+     * separators (line breaks like LF), plus the bidirectional controls (ALM, LRM/RLM,
+     * embeddings, overrides, isolates) that make "photo\u{202E}gpj.exe" display as
+     * "photoexe.jpg". Other format characters, such as ZWNJ, occur in real names.
      */
-    public const string UNSAFE_CHARACTERS = '\p{Cc}\x{061C}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}';
+    public const string UNSAFE_CHARACTERS = '\p{Cc}\x{061C}\x{200E}\x{200F}\x{2028}\x{2029}\x{202A}-\x{202E}\x{2066}-\x{2069}';
 
     // Length of the images.original_name column, in characters.
     private const int MAX_LENGTH = 255;

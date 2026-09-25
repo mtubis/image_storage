@@ -70,8 +70,15 @@ export function ImageList() {
       {images === undefined && isError && (
         <div className={styles.message}>
           <p role="alert">Could not load images.</p>
-          {/* Replaced by the loading state as soon as the retry starts. */}
-          <button type="button" onClick={() => void refetch()}>
+          {/* Replaced by the loading state as soon as the retry starts, so the focus moves to
+              the list's heading first rather than falling back to <body>. */}
+          <button
+            type="button"
+            onClick={() => {
+              headingRef.current?.focus();
+              void refetch();
+            }}
+          >
             Try again
           </button>
         </div>

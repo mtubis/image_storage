@@ -74,8 +74,8 @@ jobs:
       # One long-lived container, used via `docker exec` like the Makefile does
       # with Compose. The .env bootstrap entrypoint is bypassed here because it
       # needs vendor/; the same script runs explicitly after `composer install`.
-      # The env vars mirror docker-compose.yml, so TestEnvironmentTest proves
-      # phpunit.xml overrides them exactly as it must in the dev container.
+      # The env vars are the ones docker-compose.yml sets that TestEnvironmentTest
+      # guards, so it proves phpunit.xml overrides them as it must in the dev container.
       - name: Start PHP container
         run: |
           mkdir -p "$RUNNER_TEMP/composer-cache"

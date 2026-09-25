@@ -44,6 +44,39 @@ test('a valid upload appears at the top of the list', async ({ page }) => {
   await expect(file).toHaveValue('');
 });
 
+// Browsers (except Safari) can't decode TIFF: the client-side dimension check must give way to
+// the server, and the list must show the server's WebP thumbnail instead of the original.
+test('a TIFF is uploaded and shown through its WebP thumbnail', async ({ page }) => {
+  const name = uniqueName('scan', 'tiff');
+
+  await page.getByLabel('Your name').fill('Anna Nowak');
+  await page.getByLabel('Your e-mail').fill('anna.nowak@example.com');
+  await page.getByLabel('Image', { exact: true }).setInputFiles({
+    name,
+    mimeType: 'image/tiff',
+    buffer: await readFixture('valid.tiff'),
+  });
+  const response = page.waitForResponse(
+    (candidate) =>
+      candidate.url() === `${API_URL}/images` && candidate.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Upload', exact: true }).click();
+  uploaded.push(((await (await response).json()) as { data: StoredImage }).data.id);
+
+  await expect(page.getByText(`Uploaded ${name}.`)).toBeVisible();
+  const card = page.getByRole('article').first();
+  await expect(card).toHaveAccessibleName(name);
+  // The detected type's extension, not the name's (.tiff).
+  await expect(card.getByText('TIF', { exact: true })).toBeVisible();
+  await expect(card).toContainText('500 × 500 px');
+  const thumbnail = card.getByRole('img', { name: `Thumbnail of ${name}` });
+  await expect(thumbnail).toHaveAttribute('src', /\.webp$/);
+  // Decoded by the browser, i.e. not the "Preview unavailable" fallback.
+  await expect
+    .poll(() => thumbnail.evaluate((image: HTMLImageElement) => image.naturalWidth))
+    .toBeGreaterThan(0);
+});
+
 test('a too small image is rejected with a message', async ({ page }) => {
   // Aborted rather than only observed: a wrongly sent upload must not land in the shared database.
   let posted = false;

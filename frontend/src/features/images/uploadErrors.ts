@@ -41,6 +41,13 @@ export function toUploadErrors(error: unknown): UploadErrors {
     // Rejected by nginx or PHP before validation, so it comes without field errors.
     return { fields: [['file', 'The file is too large for the server.']], form: null };
   }
+  if (response.status === 429) {
+    // The server limits uploads per client; nothing was stored.
+    return {
+      fields: [],
+      form: 'Too many uploads in a short time. Please wait a minute and try again.',
+    };
+  }
 
   const validation = validationErrorSchema.safeParse(response.data);
   if (response.status === 422 && validation.success) {

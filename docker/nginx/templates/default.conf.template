@@ -24,8 +24,8 @@ server {
     # healthy even while PHP is unavailable.
     location = /healthz {
         access_log off;
+        default_type text/plain;
         return 200 "ok";
-        add_header Content-Type text/plain;
     }
 
     # Generated WebP thumbnails. Names are ULIDs and never rewritten, so they can be cached
@@ -43,7 +43,12 @@ server {
     location ~ \.php$ {
         try_files $uri =404;
         fastcgi_split_path_info ^(.+\.php)(/.+)$;
-        fastcgi_pass php:9000;
+        # A literal host is resolved once at startup, so a recreated php container (new IP)
+        # would get 502 until nginx restarts. Through a variable nginx asks Docker's embedded
+        # DNS again once the answer expires. 127.0.0.11 exists only on Docker networks.
+        resolver 127.0.0.11 valid=10s ipv6=off;
+        set $php_upstream php:9000;
+        fastcgi_pass $php_upstream;
         fastcgi_index index.php;
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;

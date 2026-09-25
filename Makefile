@@ -90,10 +90,11 @@ check: lint-be test-be test-be-mariadb lint-fe test-fe build-fe lint-e2e
 # globalSetup: the runner container has no access to Docker (and must not get the socket).
 # The stack stays up afterwards for inspection; `make e2e-down` removes it.
 # Options for Playwright go in `args`, e.g. make e2e args="--repeat-each=3".
+# config:clear first: bootstrap/cache is shared with development, and a cached config would
+# ignore the E2E environment.
 e2e:
 	$(E2E_COMPOSE) down --volumes --remove-orphans
 	$(E2E_COMPOSE) up --detach --build --wait --wait-timeout 300
-	# bootstrap/cache is shared with development; a cached config would ignore the E2E env.
 	$(E2E_COMPOSE) exec -T php php artisan config:clear
 	$(E2E_COMPOSE) exec -T php php artisan migrate:fresh --seed --seeder=E2eImageSeeder --force
 	$(E2E_COMPOSE) run --rm playwright $(if $(args),npx playwright test $(args))

@@ -68,7 +68,8 @@ checked against the real tool or library, not assumed from its documentation.
 - **`uploader_name` rejects control and bidirectional formatting characters** (`DisplayableText`
   rule). `string` + `max` accept them, and they would spoof or break the display. Only `Cc` and
   bidi controls are rejected, not all of `\p{C}`: format characters such as ZWNJ occur in real
-  names. Invalid UTF-8 fails the same rule.
+  names. The line and paragraph separators (U+2028/U+2029) are rejected too, since they break
+  lines like LF. Invalid UTF-8 fails the same rule.
 - **`email:rfc`, not `strict` or `dns`**: no network lookups during validation. Addresses such
   as `jan@localhost` are accepted.
 - **Web server limits are 10 MB** (`upload_max_filesize`, `post_max_size`,
@@ -89,7 +90,19 @@ checked against the real tool or library, not assumed from its documentation.
 - **The thumbnail is generated in the request, not in a job.** Decoding the image is the last
   validation step: a file that passes the rules but can't be decoded gets a `422`, not a stored
   record with a broken thumbnail. The list can also show the new image at once. The cost is
-  request time: 0.1–2.6 s for a 10000² image, depending on the format (measured).
+  request time: 0.1–2.6 s for a 10000² image, depending on the format (measured). The cheap
+  metadata size check runs before it, so crafted metadata is rejected without decoding.
+- **Only decoding failures are the file's fault.** `ThumbnailGenerationFailed` (a `422`) covers
+  reading the image and the first downscale, including exceeded resource limits. A failure
+  after that (orienting, encoding the WebP) is the server's, e.g. a missing WebP delegate, and
+  surfaces as a reported `500`: a `422` "damaged file" for every upload would hide it.
+- **Uploads are rate-limited per IP address** (30 per minute, `images.uploads_per_minute`). Each
+  can cost seconds of CPU and hundreds of MB of pixel cache, and nothing authenticates the
+  client. The limit counts before validation, so rejected attempts count too. The `429` is JSON
+  with CORS headers, and the frontend asks the user to wait. The key is the client IP as Laravel
+  sees it: behind a proxy, trusted proxies must be configured, or all clients share one limit.
+  The E2E stack raises the limit (`UPLOADS_PER_MINUTE`), since all its tests upload from one
+  address.
 - **Upload: files first, then one INSERT, no transaction.** A single INSERT is atomic. Any
   failure up to and including the INSERT deletes both stored files. Each deletion is
   best-effort and reported, and the original exception is rethrown.
@@ -224,7 +237,8 @@ checked against the real tool or library, not assumed from its documentation.
 - **A cursor must have the listing's shape, otherwise it is a `422`.** Its keys, date format,
   lowercase ULID and direction flag are checked. Laravel silently returns page 1 for an
   undecodable cursor and throws a `500` for a decodable one with foreign keys. Cursors are not
-  signed: a hand-made cursor of the right shape is simply a valid position in the list. The page size can't be set by the client.
+  signed: a hand-made cursor of the right shape is simply a valid position in the list. The
+  page size can't be set by the client.
 - **The listing selects its columns explicitly.** Metadata (a potentially large JSON value) and
   the e-mail are never loaded for the list. Strict mode turns a forgotten column into an
   exception in tests.
@@ -252,8 +266,10 @@ checked against the real tool or library, not assumed from its documentation.
 ## Frontend
 
 - **Server state only through TanStack Query.** Responses are parsed with zod at the boundary,
-  and the schemas keep only the fields the UI uses. `extension`/`mime_type` are plain strings,
-  so a format added on the server doesn't break the list. `VITE_API_URL` is validated at
+  and the schemas keep only the fields the UI uses: a change to a field it doesn't show
+  (`mime_type`, `temperature_c`, `created_at`) can't break the list. `extension` is a plain
+  string, so a format added on the server doesn't break it either. The test factories still
+  produce the full wire format. `VITE_API_URL` is validated at
   startup and fails fast with a clear message.
 - **Retry policy**: only network errors, timeouts and 5xx are retried (twice). 4xx and parse
   errors fail immediately.
@@ -320,17 +336,30 @@ checked against the real tool or library, not assumed from its documentation.
 - **Host UID/GID are passed into the images even when the ID already exists there.** macOS
   users are in group 20, which is `dialout` in Debian and Alpine. The `php` image uses
   `groupmod -o`; the Alpine frontend image reuses the existing group.
-- **The `php` image ships ImageMagick 7.1.** Ubuntu's packages ship ImageMagick 6, and TIFF,
+- **The `php` image ships ImageMagick 7.1**, from Debian trixie; the base image's Debian
+  release is pinned (`php:8.4-fpm-trixie`), since bookworm shipped ImageMagick 6. Ubuntu's
+  packages ship ImageMagick 6 too, and TIFF,
   WebP and EXIF handling depends on the version and its delegates. So CI's backend job runs in
   the project's own image instead of `setup-php`. ext-pcntl is installed, so the queue worker
   enforces job timeouts and stops gracefully.
-- **`make check` runs the same checks as CI, except E2E** (`make e2e`). CI actions are pinned to commit
-  SHAs with read-only permissions. Image layers are cached through the GitHub Actions cache.
+- **`make check` runs the same checks as CI, except E2E** (`make e2e`). CI actions are pinned to
+  commit SHAs with read-only permissions. Image layers are cached through the GitHub Actions
+  cache.
 - **The E2E stack is a separate Compose project** (ports 8001/5174, MariaDB on tmpfs) and runs
   next to the development stack without touching its data. The database is reset by
   `make e2e`, not by Playwright, because the runner container has no Docker access. The
   Playwright image and `@playwright/test` are pinned to the same version.
-- **MariaDB is published on `127.0.0.1` only**, for a local GUI client.
+- **Every port is published on `127.0.0.1` only.** The API has upload and delete without
+  authentication, so it must not be reachable from the LAN. MariaDB uses host port 13306, for
+  a local GUI client: 3306 is often taken by a local MySQL/MariaDB.
+- **nginx re-resolves `php`** through Docker's DNS (`resolver 127.0.0.11` and the upstream in a
+  variable). A literal host is resolved once at startup, so a recreated `php` container with a
+  new IP gave `502` until nginx restarted (reproduced; now `200` right away). The resolver
+  address exists only on Docker networks; outside Docker the template needs a literal address.
+- **PHP errors are logged to stderr, never displayed.** Laravel renders its own errors; this
+  covers what PHP reports itself, e.g. a fatal error Laravel can't catch.
+- **LF line endings everywhere** (root `.gitattributes`): a checkout by Git for Windows would
+  otherwise give the shell scripts copied into the containers CRLF endings (`bash\r`).
 
 ## Tooling and dependencies
 

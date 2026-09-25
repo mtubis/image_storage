@@ -84,6 +84,14 @@ describe('toUploadErrors', () => {
     });
   });
 
+  // The server limits uploads per client; retrying at once only fails again.
+  it('asks to wait after too many uploads', () => {
+    expect(toUploadErrors(httpError(429, { message: 'Too Many Attempts.' }))).toEqual({
+      fields: [],
+      form: 'Too many uploads in a short time. Please wait a minute and try again.',
+    });
+  });
+
   it('reports a network error', () => {
     expect(toUploadErrors(new AxiosError('Network Error', AxiosError.ERR_NETWORK))).toEqual({
       fields: [],

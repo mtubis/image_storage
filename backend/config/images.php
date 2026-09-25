@@ -52,4 +52,9 @@ return [
 
     'page_size' => 10,
 
+    // Uploads per minute and client IP address. Each can cost seconds of CPU and hundreds of
+    // MB of pixel cache; generous for a person, a brake on a script. Raised by the E2E stack,
+    // whose tests all upload from one address (e.g. make e2e args="--repeat-each=10").
+    'uploads_per_minute' => (int) env('UPLOADS_PER_MINUTE', 30),
+
 ];

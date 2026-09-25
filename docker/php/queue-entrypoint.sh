@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Entrypoint for the `queue` service (same image as `php`).
-# backend/ is a bind mount; wait for `artisan` to be visible there instead of
-# crash-looping the container.
+# backend/ is a bind mount; wait until its Composer dependencies are there (installed by
+# `make setup`) instead of crash-looping the container.
 set -euo pipefail
 
-until [ -f /var/www/html/artisan ]; do
-    echo "[queue] waiting for backend/artisan (Laravel not installed yet)..."
+until [ -f /var/www/html/vendor/autoload.php ]; do
+    echo "[queue] waiting for backend/vendor (run make setup)..."
     sleep 2
 done
 

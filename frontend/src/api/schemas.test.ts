@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { apiErrorSchema, imagePageSchema, imageSchema, validationErrorSchema } from '@/api/schemas';
+import { imagePageSchema, imageSchema, validationErrorSchema } from '@/api/schemas';
 import { makeImagePagePayload, makeImagePayload } from '@/test/factories';
 
 describe('imageSchema', () => {
@@ -8,15 +8,12 @@ describe('imageSchema', () => {
       id: '01m3armzpnjqtwvm6rx55mdgw6',
       original_name: 'photo.jpg',
       extension: 'jpg',
-      mime_type: 'image/jpeg',
       size_bytes: 6061,
       width: 500,
       height: 640,
       thumbnail_url: 'http://api.test/storage/thumbnails/01m3armzpnjqtwvm6rx55mdgw6.webp',
       download_url: 'http://api.test/api/v1/images/01m3armzpnjqtwvm6rx55mdgw6/download',
       uploader_name: 'Jane Doe',
-      temperature_c: 11.2,
-      created_at: '2026-09-24T22:30:18Z',
     });
   });
 
@@ -30,25 +27,25 @@ describe('imageSchema', () => {
     expect(imageSchema.safeParse(payload).success).toBe(true);
   });
 
-  it('accepts an upload time with a numeric UTC offset', () => {
-    const payload = makeImagePayload({ created_at: '2026-09-24T22:30:18+00:00' });
-
-    expect(imageSchema.safeParse(payload).success).toBe(true);
-  });
-
-  // The temperature is fetched by a background job after the upload.
-  it('accepts a missing temperature', () => {
-    expect(imageSchema.parse(makeImagePayload({ temperature_c: null })).temperature_c).toBeNull();
-  });
-
   it('accepts an extension it does not know, since the server decides what is allowed', () => {
     expect(imageSchema.parse(makeImagePayload({ extension: 'heic' })).extension).toBe('heic');
   });
 
-  it('drops fields the UI does not model, so nothing unexpected leaks into components', () => {
-    const parsed = imageSchema.parse({ ...makeImagePayload(), uploader_email: 'jane@example.com' });
+  // Also the API's own fields the UI doesn't show: a change to them can't break the list.
+  it.each(['mime_type', 'temperature_c', 'created_at', 'uploader_email'])(
+    'drops %s, which the UI does not model',
+    (field) => {
+      const parsed = imageSchema.parse({
+        ...makeImagePayload(),
+        uploader_email: 'jane@example.com',
+      });
 
-    expect(parsed).not.toHaveProperty('uploader_email');
+      expect(parsed).not.toHaveProperty(field);
+    },
+  );
+
+  it('ignores a malformed field the UI does not model', () => {
+    expect(imageSchema.safeParse(makeImagePayload({ created_at: 'yesterday' })).success).toBe(true);
   });
 
   it.each([
@@ -61,8 +58,6 @@ describe('imageSchema', () => {
     ['height', null],
     ['thumbnail_url', '/storage/thumbnails/a.webp'],
     ['download_url', 'javascript:alert(1)'],
-    ['temperature_c', '11.2'],
-    ['created_at', '2026-09-24 22:30:18'],
     ['uploader_name', undefined],
   ])('rejects an invalid %s (%j)', (field, value) => {
     expect(imageSchema.safeParse(makeImagePayload({ [field]: value })).success).toBe(false);
@@ -116,18 +111,5 @@ describe('validationErrorSchema', () => {
     ['messages that are not a list', { message: 'Invalid.', errors: { file: 'Invalid.' } }],
   ])('rejects %s', (_case, payload) => {
     expect(validationErrorSchema.safeParse(payload).success).toBe(false);
-  });
-});
-
-describe('apiErrorSchema', () => {
-  it.each([
-    ['a 404', { message: 'Not found.' }],
-    ['a 413 from nginx', { message: 'The POST data is too large.' }],
-  ])('parses %s', (_case, payload) => {
-    expect(apiErrorSchema.parse(payload)).toEqual(payload);
-  });
-
-  it('rejects a body without a message, e.g. an HTML error page parsed as text', () => {
-    expect(apiErrorSchema.safeParse('<html>Bad Gateway</html>').success).toBe(false);
   });
 });

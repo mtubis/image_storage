@@ -3,8 +3,13 @@ import type { imagePageSchema, imageSchema } from '@/api/schemas';
 import { env } from '@/lib/env';
 
 // Payloads in the exact wire format of the API (snake_case, absolute URLs), for schema tests
-// and MSW handlers. Typed from the schemas' input, so a contract change breaks them at compile time.
-export type ImagePayload = z.input<typeof imageSchema>;
+// and MSW handlers. Typed from the schemas' input, so a contract change breaks them at compile time,
+// plus the fields the API sends but the UI doesn't parse, so mocked responses stay realistic.
+export type ImagePayload = z.input<typeof imageSchema> & {
+  mime_type: string;
+  temperature_c: number | null;
+  created_at: string;
+};
 
 export type ImagePagePayload = z.input<typeof imagePageSchema> & {
   links: Record<'first' | 'last' | 'prev' | 'next', string | null>;

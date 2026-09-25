@@ -12,6 +12,9 @@ services:
       WEATHER_PROVIDER: fake
       # The temperature is stored within the upload request, so tests need no worker to wait for.
       QUEUE_CONNECTION: sync
+      # Every test uploads from the same address; repeated runs must not hit the rate limit
+      # (which the backend's feature tests cover).
+      UPLOADS_PER_MINUTE: "1000"
     volumes:
       # Uploads go to a throwaway volume, not the bind-mounted backend/storage of development.
       # php mounts it first (nginx waits for it), so Docker seeds the empty volume from the
@@ -25,7 +28,7 @@ services:
   nginx:
     restart: "no"
     ports: !override
-      - "8001:80"
+      - "127.0.0.1:8001:80"
     environment:
       FRONTEND_URL: http://localhost:5174
     volumes:
@@ -47,7 +50,7 @@ services:
   frontend:
     restart: "no"
     ports: !override
-      - "5174:5173"
+      - "127.0.0.1:5174:5173"
     environment:
       VITE_API_URL: http://localhost:8001/api/v1
     command:

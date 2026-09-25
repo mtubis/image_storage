@@ -10,7 +10,3 @@
 /tests/Fixtures/** -text -diff
 /tests/Fixtures/*.php text eol=lf diff=php
 /tests/Fixtures/*.md text eol=lf diff=markdown
-
-/.github export-ignore
-CHANGELOG.md export-ignore
-.styleci.yml export-ignore
