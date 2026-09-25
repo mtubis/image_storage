@@ -34,10 +34,13 @@ COPY docker/php/queue-entrypoint.sh /usr/local/bin/queue-entrypoint.sh
 RUN chmod +x /usr/local/bin/bootstrap-env.sh /usr/local/bin/php-entrypoint.sh /usr/local/bin/queue-entrypoint.sh
 
 # Align the container's www-data with the host user so bind-mounted files
-# in backend/ stay owned by the developer, not root.
+# in backend/ stay owned by the developer, not root. storage/app is hidden by
+# the bind mount in development; the E2E stack mounts a volume over it, and
+# Docker seeds an empty volume with this directory's owner, so uploads there
+# are writable.
 RUN groupmod -g "${APP_GID}" www-data \
     && usermod -u "${APP_UID}" -g "${APP_GID}" www-data \
-    && mkdir -p /var/www/html \
+    && mkdir -p /var/www/html/storage/app/public /var/www/html/storage/app/private \
     && chown -R www-data:www-data /var/www/html
 
 USER www-data

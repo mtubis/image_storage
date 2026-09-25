@@ -1,0 +1,93 @@
+# E2E stack: an override of docker-compose.yml, run as its own Compose project by `make e2e`
+# (project image_storage_e2e), so it never touches the development stack or its data and can
+# run next to it. Recreated from scratch on every run. No service restarts: a failing boot must
+# fail `up --wait`, and after a host reboot a stack with an empty tmpfs database is of no use.
+services:
+  php:
+    restart: "no"
+    environment:
+      APP_URL: http://localhost:8001
+      FRONTEND_URL: http://localhost:5174
+      # No real network calls in tests; an unknown value would throw instead of falling back.
+      WEATHER_PROVIDER: fake
+      # The temperature is stored within the upload request, so tests need no worker to wait for.
+      QUEUE_CONNECTION: sync
+    volumes:
+      # Uploads go to a throwaway volume, not the bind-mounted backend/storage of development.
+      # php mounts it first (nginx waits for it), so Docker seeds the empty volume from the
+      # image's storage/app, owned by www-data.
+      - storage:/var/www/html/storage/app
+
+  # Not needed with the sync queue; `queue:work` would only idle against it.
+  queue:
+    profiles: [disabled]
+
+  nginx:
+    restart: "no"
+    ports: !override
+      - "8001:80"
+    environment:
+      FRONTEND_URL: http://localhost:5174
+    volumes:
+      # Thumbnails are served from here through the public/storage link.
+      - storage:/var/www/html/storage/app:ro
+
+  db:
+    restart: "no"
+    # A fresh, in-memory database per stack; not published on the host.
+    volumes: !reset []
+    tmpfs:
+      - /var/lib/mysql
+    ports: !reset []
+
+  # The production build, as it would be deployed, rather than the dev server. Built into /tmp:
+  # frontend/dist belongs to `make build-fe`, whose bundle points at the development API.
+  # Shares frontend/node_modules with the dev container: after a lockfile change, start one stack
+  # first, or both run `npm ci` into the same directory.
+  frontend:
+    restart: "no"
+    ports: !override
+      - "5174:5173"
+    environment:
+      VITE_API_URL: http://localhost:8001/api/v1
+    command:
+      - sh
+      - -c
+      - >-
+        npx vite build --outDir /tmp/dist --emptyOutDir
+        && exec npx vite preview --outDir /tmp/dist --host 0.0.0.0 --port 5173 --strictPort
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:5173/"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      # npm ci on a fresh clone plus the build.
+      start_period: 120s
+
+  # The test runner, started on demand (`compose run`), never by `up`. The image's browsers
+  # match @playwright/test in e2e/package.json exactly; bump both together.
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.63.0-noble
+    profiles: [runner]
+    # The browser calls the API at the URL built into the bundle (localhost:8001), so it runs
+    # in the host's network like a developer's browser would. Docker Desktop on macOS/Windows
+    # needs host networking enabled for this (Linux, WSL 2 and GitHub Actions work as is).
+    network_mode: host
+    # Chromium needs more shared memory than Docker's default 64 MB.
+    shm_size: 1gb
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    environment:
+      # The image has no home for an arbitrary UID; npm needs one for its cache.
+      HOME: /tmp
+      NPM_CONFIG_UPDATE_NOTIFIER: "false"
+      CI: ${CI:-}
+      E2E_BASE_URL: http://localhost:5174
+    volumes:
+      - ./e2e:/e2e
+      - ./docker/e2e/entrypoint.sh:/usr/local/bin/e2e-entrypoint.sh:ro
+    working_dir: /e2e
+    entrypoint: ["sh", "/usr/local/bin/e2e-entrypoint.sh"]
+    command: ["npx", "playwright", "test"]
+
+volumes:
+  storage:

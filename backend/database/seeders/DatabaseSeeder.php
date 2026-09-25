@@ -14,8 +14,8 @@ final class DatabaseSeeder extends Seeder
     /**
      * Seed the application's database.
      *
-     * No auth (see CLAUDE.md), so no default users to seed here; a
-     * dedicated seeder for E2E list scenarios is added in step 4.1.
+     * No auth, so no default users to seed. The E2E data is seeded by
+     * E2eImageSeeder, explicitly and only into the E2E stack (`make e2e`).
      */
     public function run(): void
     {

@@ -9,4 +9,5 @@ if [ ! -f /app/node_modules/.package-lock.json ] \
     npm ci
 fi
 
-exec npm run dev -- --host 0.0.0.0
+# The Vite dev server by default (CMD); the E2E stack serves a production build instead.
+exec "$@"

@@ -1,4 +1,5 @@
-# Vite dev server for local development; dependencies are installed by the
+# Vite dev server for local development (the E2E stack overrides the command to
+# serve a production build); dependencies are installed by the
 # entrypoint into the bind-mounted frontend/ directory.
 FROM node:22-alpine
 
@@ -23,3 +24,4 @@ RUN if [ "$(id -u node)" != "${APP_UID}" ] || [ "$(id -g node)" != "${APP_GID}" 
 USER node
 
 ENTRYPOINT ["/usr/local/bin/frontend-entrypoint.sh"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
