@@ -188,8 +188,9 @@ jobs:
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       # Nothing is pushed or used from these builds: they fill the (current) buildx builder
-      # from the GHA cache, so the `up --build` in `make e2e`, which Compose runs on the same
-      # builder, finds every layer locally. A cache miss only costs time.
+      # from the GHA cache, so the `--build` of `make e2e-deps`/`make e2e`, which Compose runs on
+      # the same builder, finds every layer locally. `load` makes BuildKit download the layers;
+      # without an output it only reads the cache metadata. A cache miss only costs time.
       - name: Warm PHP image cache
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -200,6 +201,7 @@ jobs:
             APP_GID=${{ env.DOCKER_GID }}
           # Read only: the backend job writes this scope from the very same build.
           cache-from: type=gha,scope=php
+          load: true
 
       - name: Warm frontend image cache
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -210,6 +212,7 @@ jobs:
             APP_GID=${{ env.DOCKER_GID }}
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,scope=frontend,mode=max
+          load: true
 
       # Restore only; the backend job saves this key.
       - name: Restore Composer downloads
