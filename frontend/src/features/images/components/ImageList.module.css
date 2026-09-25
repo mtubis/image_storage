@@ -42,3 +42,13 @@
   cursor: progress;
   opacity: 0.6;
 }
+
+/* Read by screen readers, invisible on screen. */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

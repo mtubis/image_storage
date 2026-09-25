@@ -24,7 +24,8 @@ return [
 
     'allowed_headers' => ['Accept', 'Content-Type'],
 
-    // The download filename is read from Content-Disposition by the SPA.
+    // The SPA downloads through a plain link, which doesn't need it; exposed so a script-driven
+    // client (fetch/XHR) can still read the original filename.
     'exposed_headers' => ['Content-Disposition'],
 
     // Chrome's upper bound; preflights for the same request are not repeated for 2 hours.

@@ -50,3 +50,7 @@ export async function uploadImage(
 
   return imageResponseSchema.parse(response.data).data;
 }
+
+export async function deleteImage(id: string): Promise<void> {
+  await apiClient.delete(`/images/${encodeURIComponent(id)}`);
+}

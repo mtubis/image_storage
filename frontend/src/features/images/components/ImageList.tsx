@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState, type Ref } from 'react';
 import type { ApiImage } from '@/api/schemas';
 import { ImageCard } from '@/features/images/components/ImageCard';
 import { useImagesInfinite } from '@/features/images/hooks/useImagesInfinite';
@@ -10,6 +10,10 @@ const PRELOAD_MARGIN = '400px';
 
 export function ImageList() {
   const headingId = useId();
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const gridRef = useRef<HTMLUListElement>(null);
+  // Keyed by a counter: deleting two files with the same name must be announced twice.
+  const [deletion, setDeletion] = useState<{ key: number; text: string } | null>(null);
   const {
     data: images,
     dataUpdatedAt,
@@ -22,21 +26,46 @@ export function ImageList() {
     isFetchNextPageError,
   } = useImagesInfinite();
 
+  // After deleting every loaded image, more may still be on the server.
+  const isEmpty = images?.length === 0 && !hasNextPage;
   let status = '';
   if (images === undefined && !isError) {
     status = 'Loading images…';
-  } else if (images?.length === 0) {
+  } else if (isEmpty) {
     status = 'No images uploaded yet.';
   }
 
+  // Runs while the deleted card is still rendered, so its neighbours can be found in the DOM.
+  // If the focus is in the card, it would drop to <body> with it: it goes to the card that
+  // takes its place, the previous one after the last card, or the list's heading. Anywhere
+  // else (e.g. another card's confirmation), it stays where the user put it.
+  const handleDeleted = (image: ApiImage) => {
+    const item = gridRef.current?.querySelector(`[data-image-id="${image.id}"]`);
+    if (item?.contains(document.activeElement) === true) {
+      const neighbour = item.nextElementSibling ?? item.previousElementSibling;
+      const target = neighbour?.querySelector<HTMLElement>('h3') ?? headingRef.current;
+      target?.focus();
+    }
+    setDeletion((previous) => ({
+      key: (previous?.key ?? 0) + 1,
+      text: `Deleted ${image.original_name}.`,
+    }));
+  };
+
   return (
     <section aria-labelledby={headingId}>
-      <h2 id={headingId} className={styles.heading}>
+      {/* Focusable from script only, as the fallback focus target after a deletion. */}
+      <h2 id={headingId} ref={headingRef} className={styles.heading} tabIndex={-1}>
         Uploaded images
       </h2>
       {/* Always rendered: screen readers only announce changes of an existing live region. */}
       <p className={styles.message} role="status">
         {status}
+      </p>
+      {/* Screen readers only: sighted users see the card go. A new node per deletion, since
+          only content added to a live region is announced. */}
+      <p className={styles.visuallyHidden} role="status">
+        {deletion !== null && <span key={deletion.key}>{deletion.text}</span>}
       </p>
       {images === undefined && isError && (
         <div className={styles.message}>
@@ -47,9 +76,17 @@ export function ImageList() {
           </button>
         </div>
       )}
-      {images !== undefined && images.length > 0 && (
+      {images !== undefined && !isEmpty && (
         <>
-          <ImageGrid images={images} isBusy={isFetchingNextPage} />
+          {/* Empty while the loaded images are all deleted but more are on the server. */}
+          {images.length > 0 && (
+            <ImageGrid
+              ref={gridRef}
+              images={images}
+              isBusy={isFetchingNextPage}
+              onDeleted={handleDeleted}
+            />
+          )}
           <ListEnd
             dataUpdatedAt={dataUpdatedAt}
             hasNextPage={hasNextPage}
@@ -66,12 +103,19 @@ export function ImageList() {
   );
 }
 
-function ImageGrid({ images, isBusy }: { images: ApiImage[]; isBusy: boolean }) {
+interface ImageGridProps {
+  ref: Ref<HTMLUListElement>;
+  images: ApiImage[];
+  isBusy: boolean;
+  onDeleted: (image: ApiImage) => void;
+}
+
+function ImageGrid({ ref, images, isBusy, onDeleted }: ImageGridProps) {
   return (
-    <ul className={styles.grid} aria-busy={isBusy}>
+    <ul ref={ref} className={styles.grid} aria-busy={isBusy}>
       {images.map((image) => (
-        <li key={image.id}>
-          <ImageCard image={image} />
+        <li key={image.id} data-image-id={image.id}>
+          <ImageCard image={image} onDeleted={onDeleted} />
         </li>
       ))}
     </ul>

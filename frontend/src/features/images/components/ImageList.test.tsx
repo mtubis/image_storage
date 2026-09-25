@@ -65,7 +65,7 @@ describe('ImageList', () => {
 
     renderWithProviders(<ImageList />);
 
-    expect(screen.getByRole('status')).toHaveTextContent('Loading images…');
+    expect(screen.getByText('Loading images…')).toHaveAttribute('role', 'status');
     expect(screen.getByRole('heading', { level: 2, name: 'Uploaded images' })).toBeInTheDocument();
     expect(await screen.findAllByRole('article')).toHaveLength(1);
   });

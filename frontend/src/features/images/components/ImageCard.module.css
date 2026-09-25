@@ -68,3 +68,59 @@
 .uploader {
   overflow-wrap: anywhere;
 }
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* One look for the download link and the buttons next to it. */
+.action {
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.action:hover:not([aria-disabled='true']) {
+  background: var(--color-bg);
+}
+
+.danger {
+  composes: action;
+  color: var(--color-danger);
+}
+
+.action[aria-disabled='true'] {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+/* Takes its own row, so the question and its answers wrap together on narrow cards. */
+.confirmation {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.prompt {
+  flex-basis: 100%;
+  font-size: 0.875rem;
+}
+
+.error {
+  flex-basis: 100%;
+  color: var(--color-danger);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}

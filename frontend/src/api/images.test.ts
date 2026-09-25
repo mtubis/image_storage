@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
-import { fetchImagePage, uploadImage } from '@/api/images';
+import { deleteImage, fetchImagePage, uploadImage } from '@/api/images';
 import { makeImagePagePayload, makeImagePayload, makeImagePayloads } from '@/test/factories';
 import { IMAGES_URL } from '@/test/msw/handlers';
 import { server } from '@/test/msw/server';
@@ -114,5 +114,33 @@ describe('uploadImage', () => {
     await expect(
       uploadImage({ file, uploader_name: 'Jane Doe', uploader_email: 'jane@example.com' }),
     ).rejects.toBeInstanceOf(ZodError);
+  });
+});
+
+describe('deleteImage', () => {
+  it('sends a DELETE for the image', async () => {
+    let deleted: string | null = null;
+    server.use(
+      http.delete(`${IMAGES_URL}/:id`, ({ params }) => {
+        deleted = String(params.id);
+
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await expect(deleteImage('01m3armzpnjqtwvm6rx55mdgw6')).resolves.toBeUndefined();
+    expect(deleted).toBe('01m3armzpnjqtwvm6rx55mdgw6');
+  });
+
+  it('rejects when the server fails', async () => {
+    server.use(
+      http.delete(`${IMAGES_URL}/:id`, () =>
+        HttpResponse.json({ message: 'Server Error' }, { status: 500 }),
+      ),
+    );
+
+    await expect(deleteImage('01m3armzpnjqtwvm6rx55mdgw6')).rejects.toMatchObject({
+      response: { status: 500 },
+    });
   });
 });
