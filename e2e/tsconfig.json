@@ -5,8 +5,9 @@
     "types": ["node"],
     "skipLibCheck": true,
 
-    /* Playwright runs the TypeScript itself; tsc only type-checks. */
-    "module": "nodenext",
+    /* Playwright compiles and resolves the TypeScript itself (extensionless imports); tsc only
+       type-checks. */
+    "module": "preserve",
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
