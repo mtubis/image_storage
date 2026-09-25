@@ -56,13 +56,8 @@ services:
       - >-
         npx vite build --outDir /tmp/dist --emptyOutDir
         && exec npx vite preview --outDir /tmp/dist --host 0.0.0.0 --port 5173 --strictPort
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:5173/"]
-      interval: 5s
-      timeout: 3s
-      retries: 12
-      # npm ci on a fresh clone plus the build.
-      start_period: 120s
+    # The healthcheck (Vite answering on :5173) is inherited; its start period covers npm ci
+    # on a fresh clone plus the build.
 
   # The test runner, started on demand (`compose run`), never by `up`. The image's browsers
   # match @playwright/test in e2e/package.json exactly; bump both together.

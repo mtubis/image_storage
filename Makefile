@@ -1,13 +1,26 @@
 SHELL := /bin/bash
 COMPOSE := docker compose
+# Files created in the bind mounts (vendor, node_modules, storage) belong to the host user.
+DEV_COMPOSE := DOCKER_UID=$$(id -u) DOCKER_GID=$$(id -g) $(COMPOSE)
 # The E2E stack is its own Compose project (docker-compose.e2e.yml): other ports, its own
 # database and storage, so it runs next to the development stack without touching it.
 E2E_COMPOSE := DOCKER_UID=$$(id -u) DOCKER_GID=$$(id -g) $(COMPOSE) -p image_storage_e2e -f docker-compose.yml -f docker-compose.e2e.yml
 
-.PHONY: up down ps logs sh-php artisan fixtures test-be test-be-mariadb test-fe lint-be lint-fe lint-e2e build-fe fix check e2e e2e-deps e2e-logs e2e-down
+.PHONY: setup up down ps logs sh-php artisan fixtures test-be test-be-mariadb test-fe lint-be lint-fe lint-e2e build-fe fix check e2e e2e-deps e2e-logs e2e-down
+
+# First run on a fresh clone; safe to repeat. backend/vendor must exist before the php service
+# starts (its entrypoint runs key:generate and storage:link), so composer runs first in a one-off
+# container that bypasses that entrypoint. Migrations run in a second one-off container (which
+# starts db and creates backend/.env once, before php and queue could race on it), so the queue
+# worker never polls a missing jobs table. The frontend container installs node_modules itself.
+setup:
+	$(DEV_COMPOSE) run --rm --no-deps --build --entrypoint composer \
+		php install --no-interaction --no-progress --prefer-dist
+	$(DEV_COMPOSE) run --rm php php artisan migrate --force
+	$(DEV_COMPOSE) up --detach --build --wait --wait-timeout 300
 
 up:
-	DOCKER_UID=$$(id -u) DOCKER_GID=$$(id -g) $(COMPOSE) up -d --build
+	$(DEV_COMPOSE) up -d --build
 
 down:
 	$(COMPOSE) down

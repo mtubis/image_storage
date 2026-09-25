@@ -112,7 +112,7 @@ describe('exif-iptc.jpg', function (): void {
             // ext-exif names PixelX/YDimension after their old Exif 2.1 names.
             ->and($exif['EXIF']['ExifImageWidth'] ?? null)->toBe(640)
             ->and($exif['EXIF']['ExifImageLength'] ?? null)->toBe(500)
-            // Latin-1 "Café": the sanitizer in step 1.5 must cope with invalid UTF-8.
+            // Latin-1 "Café": the metadata sanitizer must cope with invalid UTF-8.
             ->and($exif['IFD0']['Make'] ?? null)->toBe("Caf\xE9 Optics")
             ->and(mb_check_encoding($exif['IFD0']['Make'] ?? '', 'UTF-8'))->toBeFalse()
             // Undefined charset header + raw bytes, returned verbatim.

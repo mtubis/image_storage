@@ -42,7 +42,7 @@ test('scrolling to the end loads the next page', async ({ page }) => {
   await expect(page.getByText('All images loaded.')).toBeVisible();
 });
 
-// Regression (step 3.5): a portrait thumbnail made its box taller than wide, and so its card
+// Regression: a portrait thumbnail made its box taller than wide, and so its card
 // taller than a landscape neighbour's.
 test('a portrait thumbnail stays inside a square box', async ({ page }) => {
   await page.goto('/');

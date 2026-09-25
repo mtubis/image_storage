@@ -21,7 +21,7 @@
 /e2e/test-results
 /e2e/playwright-report
 
-# Claude Code local configuration and planning docs — not part of the delivered repo
+# Local AI-assistant configuration and working notes; not part of the repository
 /CLAUDE.md
 /PLAN.md
 /.claude/

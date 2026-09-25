@@ -1,10 +1,9 @@
 # Image Storage — Backend
 
-Laravel 13 JSON API for the Image Storage recruitment assignment. See the
-repository root for the full picture: `../CLAUDE.md` (requirements and
-conventions) and `../PLAN.md` (step-by-step plan and decision log).
+The Laravel 13 JSON API behind Image Storage. See the [root README](../README.md) for setup,
+architecture, the API and testing, and [docs/DECISIONS.md](../docs/DECISIONS.md) for the
+reasoning behind the design.
 
-Runs as part of the root `docker-compose.yml` stack; see the root `Makefile`
-for the commands (`make up`, `make artisan cmd="..."`, `make test-be`,
-`make lint-be`, ...). No standalone setup is needed or supported outside
-that stack.
+Runs as part of the root `docker-compose.yml` stack; see the root `Makefile` for the commands
+(`make setup`, `make artisan cmd="..."`, `make test-be`, `make lint-be`, ...). No standalone
+setup is needed or supported outside that stack.
