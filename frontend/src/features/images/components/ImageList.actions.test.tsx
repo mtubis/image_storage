@@ -38,13 +38,19 @@ type DeleteResponse = 204 | 404 | 500 | 'network-error';
 
 // Answers every DELETE with the given response after a short delay (20 ms unless set per ID),
 // so the pending state renders, and records the deleted IDs.
-function serveDelete(response: DeleteResponse = 204, delays: Record<string, number> = {}) {
+// A delay per image ID is either milliseconds or a promise that holds the response until the
+// test settles it, for assertions that must run while the request is still pending.
+function serveDelete(
+  response: DeleteResponse = 204,
+  delays: Record<string, number | Promise<void>> = {},
+) {
   const deletedIds: string[] = [];
   server.use(
     http.delete(`${IMAGES_URL}/:id`, async ({ params }) => {
       const id = String(params.id);
       deletedIds.push(id);
-      await delay(delays[id] ?? 20);
+      const wait = delays[id] ?? 20;
+      await (typeof wait === 'number' ? delay(wait) : wait);
       if (response === 'network-error') {
         return HttpResponse.error();
       }
@@ -147,7 +153,14 @@ describe('ImageList delete', () => {
       makeImagePayload({ original_name: 'c.jpg' }),
     ];
     const requested = servePages({ first: makeImagePagePayload([first, second, third]) });
-    const deleted = serveDelete();
+    // Held until the pending state has been checked: a response landing in the middle of the
+    // click on the pending button raced with the focus assertion (flaky on slow CI runners).
+    let finishDelete: (() => void) | undefined;
+    const deleted = serveDelete(204, {
+      [second.id]: new Promise<void>((resolve) => {
+        finishDelete = resolve;
+      }),
+    });
     renderWithProviders(<ImageList />);
 
     await user.click(await screen.findByRole('button', { name: 'Delete b.jpg' }));
@@ -159,6 +172,7 @@ describe('ImageList delete', () => {
     expect(pending).toHaveFocus();
     expect(within(card('b.jpg')).queryByRole('button', { name: 'Cancel' })).toBeNull();
     await user.click(pending);
+    finishDelete?.();
 
     await waitFor(() => {
       expect(screen.queryByRole('article', { name: 'b.jpg' })).not.toBeInTheDocument();
