@@ -4,7 +4,7 @@ COMPOSE := docker compose
 # database and storage, so it runs next to the development stack without touching it.
 E2E_COMPOSE := DOCKER_UID=$$(id -u) DOCKER_GID=$$(id -g) $(COMPOSE) -p image_storage_e2e -f docker-compose.yml -f docker-compose.e2e.yml
 
-.PHONY: up down ps logs sh-php artisan fixtures test-be test-be-mariadb test-fe lint-be lint-fe lint-e2e build-fe fix check e2e e2e-down
+.PHONY: up down ps logs sh-php artisan fixtures test-be test-be-mariadb test-fe lint-be lint-fe lint-e2e build-fe fix check e2e e2e-deps e2e-logs e2e-down
 
 up:
 	DOCKER_UID=$$(id -u) DOCKER_GID=$$(id -g) $(COMPOSE) up -d --build
@@ -70,7 +70,7 @@ fix:
 	$(E2E_COMPOSE) run --rm --no-deps playwright npm run format
 
 # Mirrors the CI workflow (.github/workflows/ci.yml): green here means green there.
-# Except lint-e2e, which joins CI with the E2E job (PLAN.md step 4.3).
+# lint-e2e runs in CI's E2E job, together with `make e2e` (which is not part of `check`).
 check: lint-be test-be test-be-mariadb lint-fe test-fe build-fe lint-e2e
 
 # A fresh stack and database on every run. The data is reset here rather than in Playwright's
@@ -84,6 +84,17 @@ e2e:
 	$(E2E_COMPOSE) exec -T php php artisan config:clear
 	$(E2E_COMPOSE) exec -T php php artisan migrate:fresh --seed --seeder=E2eImageSeeder --force
 	$(E2E_COMPOSE) run --rm playwright $(if $(args),npx playwright test $(args))
+
+# A fresh clone has no backend/vendor, which the php service's entrypoint needs (key:generate,
+# storage:link), so this runs composer directly in a one-off container, bypassing it.
+# composer_cache=<host dir> mounts a download cache (used by CI).
+e2e-deps:
+	$(E2E_COMPOSE) run --rm --no-deps --build --entrypoint composer \
+		$(if $(composer_cache),--volume $(composer_cache):/composer-cache --env COMPOSER_CACHE_DIR=/composer-cache) \
+		php install --no-interaction --no-progress --prefer-dist
+
+e2e-logs:
+	$(E2E_COMPOSE) logs --no-color --timestamps
 
 e2e-down:
 	$(E2E_COMPOSE) down --volumes --remove-orphans
