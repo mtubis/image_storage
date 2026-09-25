@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.4",
         "ext-imagick": "*",
+        "dedoc/scramble": "^0.13.45",
         "intervention/image": "^4.3",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0"

@@ -7,13 +7,19 @@ namespace App\Providers;
 use App\Contracts\ImageMetadataExtractor;
 use App\Contracts\ThumbnailGenerator;
 use App\Contracts\WeatherProvider;
+use App\OpenApi\DimensionsRuleTransformer;
+use App\OpenApi\FileSizeRuleTransformer;
+use App\OpenApi\ImageDownloadOperationTransformer;
+use App\OpenApi\MimesRuleTransformer;
 use App\Services\Images\InterventionThumbnailGenerator;
 use App\Services\Images\NativeImageMetadataExtractor;
 use App\Services\Weather\FakeWeatherProvider;
 use App\Services\Weather\OpenMeteoWeatherProvider;
 use Carbon\CarbonImmutable;
+use Dedoc\Scramble\Scramble;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Imagick;
 use InvalidArgumentException;
@@ -71,6 +77,14 @@ final class AppServiceProvider extends ServiceProvider
         Date::use(CarbonImmutable::class);
 
         $this->limitImagickResources();
+
+        // Scramble shows the docs outside "local" only to whom this gate allows. The API has no
+        // authentication, so the document reveals nothing the API itself doesn't: allow everyone.
+        Gate::define('viewApiDocs', static fn (?object $user = null): bool => true);
+
+        Scramble::configure()
+            ->withRuleTransformers([MimesRuleTransformer::class, DimensionsRuleTransformer::class, FileSizeRuleTransformer::class])
+            ->withOperationTransformers(ImageDownloadOperationTransformer::class);
     }
 
     /**

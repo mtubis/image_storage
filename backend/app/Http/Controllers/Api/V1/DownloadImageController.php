@@ -7,13 +7,18 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Image;
 use App\Support\DownloadFilename;
+use Dedoc\Scramble\Attributes\Endpoint;
+use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Container\Attributes\Storage;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Not a resource action, so a single-action controller rather than an extra ImageController method.
+ *
+ * Its response is documented by App\OpenApi\ImageDownloadOperationTransformer.
  */
+#[Group('Images')]
 final class DownloadImageController extends Controller
 {
     /**
@@ -23,6 +28,7 @@ final class DownloadImageController extends Controller
      * a 404 that would contradict the listing. It fails before any header is sent only because
      * the disk's size() provides Content-Length, so that must not come from the stored size_bytes.
      */
+    #[Endpoint(title: 'Download an image', description: 'The original file as uploaded, as an attachment named by its original file name.')]
     public function __invoke(Image $image, #[Storage('originals')] FilesystemAdapter $originals): StreamedResponse
     {
         /** @var array<string, list<string>> $types */

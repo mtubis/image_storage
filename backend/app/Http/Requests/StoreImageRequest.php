@@ -26,6 +26,9 @@ final class StoreImageRequest extends FormRequest
     private const string UNSAFE_NAME_CHARACTERS = '/[\p{Cc}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u';
 
     /**
+     * A comment right above a key is that field's description in the API documentation, so
+     * notes for developers go next to the rule they explain.
+     *
      * @return array<string, list<string|File|Dimensions|CompleteJpeg>>
      */
     public function rules(): array
@@ -47,10 +50,17 @@ final class StoreImageRequest extends FormRequest
                 // A truncated JPEG still decodes (with grey rows); other formats fail to decode.
                 new CompleteJpeg,
             ],
-            // A /u regex fails on invalid UTF-8, which would otherwise surface later as a 500
-            // (DB "Incorrect string value", json_encode). Only control characters (Cc) are
-            // excluded: format characters such as ZWNJ are legitimate in names.
-            'uploader_name' => ['required', 'string', 'max:100', 'regex:/^\P{Cc}+$/u'],
+            /** Shown next to the image in the listing. Control characters are not allowed. */
+            'uploader_name' => [
+                'required',
+                'string',
+                'max:100',
+                // A /u regex fails on invalid UTF-8, which would otherwise surface later as a 500
+                // (DB "Incorrect string value", json_encode). Only control characters (Cc) are
+                // excluded: format characters such as ZWNJ are legitimate in names.
+                'regex:/^\P{Cc}+$/u',
+            ],
+            /** Stored with the image, never returned by the API. */
             'uploader_email' => ['required', 'string', 'email:rfc', 'max:255'],
         ];
     }

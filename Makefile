@@ -36,6 +36,7 @@ lint-be:
 	$(COMPOSE) exec -T php vendor/bin/pint --test
 	$(COMPOSE) exec -T php vendor/bin/phpstan analyse
 	$(COMPOSE) exec -T php vendor/bin/rector --dry-run
+	$(COMPOSE) exec -T php php artisan scramble:analyze
 
 lint-fe:
 	$(COMPOSE) exec -T frontend npm run lint

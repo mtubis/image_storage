@@ -93,6 +93,10 @@ jobs:
       - name: Rector
         run: docker exec php vendor/bin/rector --dry-run --no-progress-bar
 
+      # Fails when Scramble cannot infer part of the API documentation.
+      - name: API documentation
+        run: docker exec php php artisan scramble:analyze
+
       - name: Pest
         run: docker exec php vendor/bin/pest
 

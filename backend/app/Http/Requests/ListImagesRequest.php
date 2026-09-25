@@ -17,7 +17,7 @@ final class ListImagesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Opaque, taken from meta.next_cursor / meta.prev_cursor of a previous page.
+            /** Opaque; the `meta.next_cursor` (or `meta.prev_cursor`) of a previous page. */
             'cursor' => ['nullable', new ImageListingCursor],
         ];
     }
