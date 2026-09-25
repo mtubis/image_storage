@@ -10,8 +10,8 @@ it('keeps JSON-safe values unchanged', function (mixed $value): void {
     'ASCII' => 'FixtureCam',
     'UTF-8 with diacritics' => 'Zażółć gęślą jaźń',
     'empty string' => '',
-    // Valid UTF-8, so no reason to hide it; json_encode() escapes control characters.
-    'control characters' => "\x00\x04",
+    // The only control characters that occur in text; json_encode() escapes each as 2 bytes.
+    'tab, line feed, carriage return' => "Line 1\r\nLine\t2",
     'integer' => 6,
     'float' => 1.5,
     'boolean' => true,
@@ -19,7 +19,7 @@ it('keeps JSON-safe values unchanged', function (mixed $value): void {
     'rational as returned by ext-exif' => '72/1',
 ]);
 
-it('wraps invalid UTF-8 in a base64 object that decodes to the original bytes', function (string $bytes): void {
+it('wraps invalid UTF-8 and binary data in a base64 object that decodes to the original bytes', function (string $bytes): void {
     $sanitized = new MetadataSanitizer()->sanitize(['value' => $bytes]);
 
     expect($sanitized['value'])->toBe(['base64' => base64_encode($bytes)])
@@ -29,6 +29,10 @@ it('wraps invalid UTF-8 in a base64 object that decodes to the original bytes', 
     'binary' => "\x00\x01\x02\xFF\xFE\x80\x81\x7F",
     'truncated multibyte sequence' => "\xC5",
     'overlong encoding' => "\xC0\xAF",
+    // Valid UTF-8, but binary: json_encode() would inflate most such bytes 6× ("\u0001").
+    'C0 control characters' => "\x00\x04",
+    'text with a single control character' => "Fixture\x01Cam",
+    'escape sequence (IPTC coded character set)' => "\x1B%G",
 ]);
 
 it('sanitizes nested arrays and keeps their keys', function (): void {

@@ -102,7 +102,7 @@ final class Image extends Model
             'size_bytes' => 'integer',
             'width' => 'integer',
             'height' => 'integer',
-            'metadata' => 'array',
+            'metadata' => 'json:unicode',
             'temperature_c' => 'float',
             'temperature_fetched_at' => 'datetime',
         ];

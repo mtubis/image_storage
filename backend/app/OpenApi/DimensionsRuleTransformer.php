@@ -32,7 +32,7 @@ final readonly class DimensionsRuleTransformer implements RuleTransformer
             'aspect ratio' => $constraints['ratio'] ?? null,
             'aspect ratio at least' => $constraints['min_ratio'] ?? null,
             'aspect ratio at most' => $constraints['max_ratio'] ?? null,
-        ]);
+        ], static fn (?string $limit): bool => $limit !== null);
 
         if ($limits === []) {
             return $previous;

@@ -132,6 +132,8 @@ it('accepts a valid uploader name', function (string $name): void {
     'with apostrophe and non-Latin script' => "O'Brien Ελένη 李",
     // The limit counts characters, not bytes.
     '100 multibyte characters' => str_repeat('Ł', 100),
+    // A format character, but not a bidi control: part of correct Persian spelling.
+    'with zero-width non-joiner' => "Mi\u{200C}khāh",
 ]);
 
 it('rejects an invalid uploader name', function (mixed $name, string $message): void {
@@ -149,6 +151,10 @@ it('rejects an invalid uploader name', function (mixed $name, string $message): 
     'invalid UTF-8' => ["Jan Kowalsk\xC3\x28", 'The name field format is invalid.'],
     'NUL byte' => ["Jan\x00Kowalski", 'The name field format is invalid.'],
     'line break' => ["Jan\nKowalski", 'The name field format is invalid.'],
+    // Would display as "Jan Kowalski" written backwards after the override, spoofing the name.
+    'bidi override' => ["Jan \u{202E}ikslawoK", 'The name field format is invalid.'],
+    'bidi isolate' => ["Jan \u{2067}Kowalski", 'The name field format is invalid.'],
+    'Arabic letter mark' => ["Jan \u{061C}Kowalski", 'The name field format is invalid.'],
 ]);
 
 it('accepts a valid uploader e-mail', function (string $email): void {

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Data;
 
 /**
- * EXIF and IPTC of one image. Values are JSON-safe: anything that was not valid UTF-8 is
- * wrapped as {"base64": "..."} by MetadataSanitizer.
+ * EXIF and IPTC of one image. Values are JSON-safe: binary data and anything that was not
+ * valid UTF-8 is wrapped as {"base64": "..."} by MetadataSanitizer.
  */
 final readonly class ImageMetadata
 {

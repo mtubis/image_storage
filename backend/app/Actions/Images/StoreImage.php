@@ -7,9 +7,11 @@ namespace App\Actions\Images;
 use App\Contracts\ImageMetadataExtractor;
 use App\Contracts\ThumbnailGenerator;
 use App\Data\StoreImageData;
+use App\Exceptions\MetadataTooLarge;
 use App\Exceptions\ThumbnailGenerationFailed;
 use App\Jobs\FetchImageTemperature;
 use App\Models\Image;
+use Illuminate\Container\Attributes\Config;
 use Illuminate\Container\Attributes\Storage;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Debug\ExceptionHandler;
@@ -26,10 +28,12 @@ final readonly class StoreImage
         #[Storage('thumbnails')] private Filesystem $thumbnailsDisk,
         private ExceptionHandler $exceptions,
         private Dispatcher $bus,
+        #[Config('images.max_metadata_bytes')] private int $maxMetadataBytes,
     ) {}
 
     /**
      * @throws ThumbnailGenerationFailed when the contents cannot be decoded; nothing is stored
+     * @throws MetadataTooLarge when the metadata would not fit into the database; nothing is stored
      */
     public function handle(StoreImageData $data): Image
     {
@@ -48,6 +52,8 @@ final readonly class StoreImage
             'uploader_email' => $data->uploaderEmail,
             'metadata' => $metadata->isEmpty() ? null : $metadata->toArray(),
         ]);
+        $this->assertMetadataFits($image);
+
         // The ID is known before the row exists, so the stored files can be named after it:
         // the client's file name never reaches the filesystem.
         $image->id = $image->newUniqueId();
@@ -79,6 +85,19 @@ final readonly class StoreImage
         }
 
         return $image;
+    }
+
+    /**
+     * Measures the JSON the cast has already produced, i.e. exactly what the INSERT will send.
+     */
+    private function assertMetadataFits(Image $image): void
+    {
+        $encoded = $image->getAttributes()['metadata'] ?? null;
+        $bytes = is_string($encoded) ? strlen($encoded) : 0;
+
+        if ($bytes > $this->maxMetadataBytes) {
+            throw MetadataTooLarge::encodedSize($bytes, $this->maxMetadataBytes);
+        }
     }
 
     /**

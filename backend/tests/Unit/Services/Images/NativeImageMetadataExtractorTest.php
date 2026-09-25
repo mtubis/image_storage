@@ -11,12 +11,13 @@ function metadata_of(string $contents): ImageMetadata
 }
 
 /**
- * The IPTC record written into both exif-iptc fixtures (see tests/Fixtures/README.md).
+ * The IPTC record written into both exif-iptc fixtures (see tests/Fixtures/README.md), as
+ * sanitized: the binary record versions and the escape sequence come back base64-wrapped.
  */
 const FIXTURE_IPTC = [
-    '1#000' => ["\x00\x04"],
-    '1#090' => ["\x1B%G"],
-    '2#000' => ["\x00\x04"],
+    '1#000' => [['base64' => 'AAQ=']],
+    '1#090' => [['base64' => 'GyVH']],
+    '2#000' => [['base64' => 'AAQ=']],
     '2#005' => ['Zażółć gęślą jaźń'],
     '2#025' => ['katowice', 'fixture', 'żółw'],
     '2#080' => ['Jan Kowalski'],
@@ -126,6 +127,16 @@ it('extracts IPTC from a TIFF tag written as LONG, as Photoshop does', function 
     expect($metadata->iptc)->toBe(FIXTURE_IPTC)
         ->and($metadata->exif)->toBe([]);
 })->with(['little-endian (II)' => false, 'big-endian (MM)' => true]);
+
+it('keeps the raw IPTC tag in EXIF when it does not parse as IPTC', function (string $block, string|array $stored): void {
+    $metadata = metadata_of(tiff_with_iptc_tag($block));
+
+    expect($metadata->iptc)->toBe([])
+        ->and($metadata->exif['IFD0'])->toMatchArray(['IPTC/NAA' => $stored]);
+})->with([
+    'text' => ['not an IPTC record', 'not an IPTC record'],
+    'binary' => ["\x1C\xFF\xFE\xFD\xFC", ['base64' => base64_encode("\x1C\xFF\xFE\xFD\xFC")]],
+]);
 
 it('falls back to the IPTC tag in EXIF for a JPEG without APP13', function (): void {
     $metadata = metadata_of(jpeg_with_exif(tiff_with_iptc_tag_as_long(bigEndian: false)));
@@ -250,6 +261,18 @@ function tiff_with_iptc_tag_as_long(bool $bigEndian): string
     return $magic.pack($long, 8)
         .pack($short, 1).pack($short.$short.$long.$long, 33723, 4, strlen($iptc) / 4, 26).pack($long, 0)
         .$iptc;
+}
+
+/**
+ * A minimal little-endian TIFF whose only tag is 33723 (IPTC-NAA), written as UNDEFINED.
+ * $bytes must be longer than 4 bytes: shorter values live inside the IFD entry itself.
+ */
+function tiff_with_iptc_tag(string $bytes): string
+{
+    // Header (8 bytes), IFD0 at offset 8 with one entry (2 + 12 + 4 bytes), data at offset 26.
+    return "II*\0".pack('V', 8)
+        .pack('v', 1).pack('vvVV', 33723, 7, strlen($bytes), 26).pack('V', 0)
+        .$bytes;
 }
 
 /**

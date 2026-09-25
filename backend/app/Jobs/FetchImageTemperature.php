@@ -23,8 +23,9 @@ use Throwable;
 /**
  * Records the air temperature at the image's upload time.
  *
- * Queued after commit: the image is created inside a transaction, and a worker picking the job
- * up earlier would not find the row (and, with DeleteWhenMissingModels, drop it silently).
+ * Queued after commit: StoreImage dispatches it outside any transaction today, but if a caller
+ * ever wraps the upload in one, a worker picking the job up before the commit would not find the
+ * row (and, with DeleteWhenMissingModels, drop it silently).
  * A deleted image needs no temperature, so a job for it is discarded instead of failing.
  */
 #[Tries(4)]

@@ -16,20 +16,6 @@ return [
     |
     */
 
-    'postmark' => [
-        'key' => env('POSTMARK_API_KEY'),
-    ],
-
-    'resend' => [
-        'key' => env('RESEND_API_KEY'),
-    ],
-
-    'ses' => [
-        'key' => env('AWS_ACCESS_KEY_ID'),
-        'secret' => env('AWS_SECRET_ACCESS_KEY'),
-        'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
-    ],
-
     // "fake" returns a constant temperature without network access (E2E, local work offline).
     'weather' => [
         'provider' => env('WEATHER_PROVIDER', 'open-meteo'),
@@ -48,13 +34,6 @@ return [
         // Attempts in total, including the first one (Laravel's retry() semantics).
         'attempts' => 2,
         'retry_sleep_ms' => 250,
-    ],
-
-    'slack' => [
-        'notifications' => [
-            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
-            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
-        ],
     ],
 
 ];

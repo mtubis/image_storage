@@ -52,6 +52,15 @@ it('responds with a JSON 404 for an unknown or malformed id', function (string $
     'not a ULID' => 'not-an-id',
 ]);
 
+// See DownloadImageTest: MariaDB would otherwise match the upper-case spelling.
+it('responds with a JSON 404 for an existing id in upper case', function (): void {
+    $image = stored_image('valid.jpg');
+
+    $this->delete('/api/v1/images/'.Str::upper($image->id))->assertNotFound();
+
+    expect(Image::query()->sole()->is($image))->toBeTrue();
+});
+
 it('responds with 404 to a repeated delete', function (): void {
     $image = stored_image('valid.jpg');
 

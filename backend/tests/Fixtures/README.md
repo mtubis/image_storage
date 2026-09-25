@@ -116,12 +116,13 @@ Further details that matter for metadata extraction:
 `NativeImageMetadataExtractor` (`app/Services/Images`) builds on the behaviour above so that
 every format yields the same shape: `exif` holds ext-exif's sections (`IFD0`, `EXIF`, `GPS`,
 …) without the PHP-computed `FILE` and `COMPUTED`, and `iptc` holds `iptcparse()` output.
-Values that are not valid UTF-8 are stored as `{"base64": "…"}`.
+Values that are not valid UTF-8, or that contain C0 control characters other than tab, LF and
+CR (binary data such as the IPTC record version `\x00\x04`), are stored as `{"base64": "…"}`.
 
 | Format | EXIF source | IPTC source |
 |---|---|---|
 | JPEG | `exif_read_data()` on the bytes | `APP13` via `getimagesizefromstring()` |
-| TIFF | `exif_read_data()` on the bytes (structural IFD0 tags included) | tag 33723 `IPTC/NAA`, removed from `exif`; a LONG-typed tag (Photoshop) is repacked in the file's byte order |
+| TIFF | `exif_read_data()` on the bytes (structural IFD0 tags included) | tag 33723 `IPTC/NAA`, removed from `exif` when it parses (kept raw otherwise); a LONG-typed tag (Photoshop) is repacked in the file's byte order |
 | PNG | `eXIf` chunk, parsed as a TIFF stream | — |
 | WebP | RIFF `EXIF` chunk, parsed as a TIFF stream (Imagick's `pingImage()` doesn't expose it) | — |
 | BMP | — | — |

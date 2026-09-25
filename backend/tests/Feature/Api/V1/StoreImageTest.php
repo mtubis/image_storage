@@ -151,6 +151,27 @@ it('rejects an image that cannot be decoded and stores nothing', function (strin
         && str_contains((string) $context['reason'], 'Cannot generate a thumbnail'));
 })->with(['valid.png', 'valid.webp', 'valid.bmp']);
 
+// Real camera metadata is far below the limit; a crafted file can make ext-exif's output
+// several times its own size (see config/images.php).
+it('rejects an image whose metadata is too large to store, and stores nothing', function (): void {
+    Log::spy();
+    config(['images.max_metadata_bytes' => 100]);
+
+    post_image(['file' => uploaded_fixture('exif-iptc.jpg')])
+        ->assertUnprocessable()
+        ->assertExactJson([
+            'message' => 'The file contains more metadata than can be stored.',
+            'errors' => ['file' => ['The file contains more metadata than can be stored.']],
+        ]);
+
+    expect(Image::query()->count())->toBe(0)
+        ->and(Storage::disk('originals')->allFiles())->toBe([])
+        ->and(Storage::disk('thumbnails')->allFiles())->toBe([]);
+    Queue::assertNothingPushed();
+    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message, array $context): bool => $message === 'An uploaded image has too much metadata to store.'
+        && str_contains((string) $context['reason'], 'more than the limit of 100'));
+});
+
 it('answers with a JSON 500 and stores nothing when persisting fails', function (): void {
     Image::creating(fn (): never => throw new RuntimeException('Database is gone.'));
 

@@ -3,6 +3,8 @@ server {
     server_name _;
     root /var/www/html/public;
     index index.php index.html;
+    # No nginx version in the Server header or error pages, like expose_php = Off for PHP.
+    server_tokens off;
 
     # Matches php.ini's upload_max_filesize/post_max_size (docker/php/php.ini)
     # so an oversized upload gets Laravel's 422, not nginx's bare 413.

@@ -15,7 +15,10 @@ return [
     'allowed_methods' => ['GET', 'POST', 'DELETE'],
 
     // An Origin header never has a trailing slash, a configured URL easily does.
-    'allowed_origins' => array_filter([rtrim((string) env('FRONTEND_URL', ''), '/')]),
+    'allowed_origins' => array_filter(
+        [rtrim((string) env('FRONTEND_URL', ''), '/')],
+        static fn (string $origin): bool => $origin !== '',
+    ),
 
     'allowed_origins_patterns' => [],
 

@@ -11,7 +11,8 @@ it('matches the assignment upload constraints', function (): void {
         ->and(config('images.max_width'))->toBe(10000)
         ->and(config('images.max_height'))->toBe(10000)
         ->and(config('images.page_size'))->toBe(10)
-        ->and(config('images.thumbnail_max_edge'))->toBe(400);
+        ->and(config('images.thumbnail_max_edge'))->toBe(400)
+        ->and(config('images.max_metadata_bytes'))->toBe(8 * 1024 ** 2);
 });
 
 it('allows exactly JPG, PNG, WebP, TIFF and BMP', function (): void {

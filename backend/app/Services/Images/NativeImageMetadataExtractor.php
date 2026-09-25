@@ -41,13 +41,15 @@ final readonly class NativeImageMetadataExtractor implements ImageMetadataExtrac
         });
 
         // JPEG keeps IPTC in APP13; TIFF (and the odd JPEG converted from one) in tag 33723.
-        $iptcBlock = $mimeType === 'image/jpeg' ? $this->app13Segment($contents) : null;
-        $iptcFromTag = $iptcBlock === null;
-        $iptcBlock ??= $this->iptcTagBytes($exif);
+        $app13 = $mimeType === 'image/jpeg' ? $this->app13Segment($contents) : null;
+        $iptc = $this->parseIptc($app13 ?? $this->iptcTagBytes($exif));
+        // The tag is dropped only when its content is kept as parsed IPTC; an unparseable
+        // block stays in EXIF, so its raw bytes are not lost.
+        $iptcTagParsed = $app13 === null && $iptc !== [];
 
         return new ImageMetadata(
-            exif: $this->sanitizeSections($this->withoutDerivedData($exif, $iptcFromTag)),
-            iptc: $this->sanitizeIptc($this->parseIptc($iptcBlock)),
+            exif: $this->sanitizeSections($this->withoutDerivedData($exif, $iptcTagParsed)),
+            iptc: $this->sanitizeIptc($iptc),
         );
     }
 
@@ -131,14 +133,14 @@ final readonly class NativeImageMetadataExtractor implements ImageMetadataExtrac
 
     /**
      * @param  array<array-key, mixed>  $exif
-     * @param  bool  $iptcFromTag  the IPTC tag was the IPTC source, so it is already kept, parsed
+     * @param  bool  $iptcTagParsed  the IPTC tag parsed into "iptc", so its raw copy in EXIF is redundant
      * @return array<array-key, mixed>
      */
-    private function withoutDerivedData(array $exif, bool $iptcFromTag): array
+    private function withoutDerivedData(array $exif, bool $iptcTagParsed): array
     {
         $exif = array_diff_key($exif, array_flip(self::COMPUTED_SECTIONS));
 
-        if ($iptcFromTag && is_array($exif['IFD0'] ?? null)) {
+        if ($iptcTagParsed && is_array($exif['IFD0'] ?? null)) {
             unset($exif['IFD0'][self::IPTC_TAG]);
         }
 

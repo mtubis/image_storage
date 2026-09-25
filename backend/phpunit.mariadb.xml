@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Arch">
+            <file>tests/ArchTest.php</file>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <!-- <server>, not <env>: Laravel reads $_SERVER first, and in Docker the container's
+             env vars (APP_ENV, DB_*, QUEUE_CONNECTION) land there, so <env> would lose to them
+             and the suite would run against the dev database. <server> always overwrites. -->
+        <server name="APP_ENV" value="testing"/>
+        <server name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <server name="BCRYPT_ROUNDS" value="4"/>
+        <server name="BROADCAST_CONNECTION" value="null"/>
+        <server name="CACHE_STORE" value="array"/>
+        <!-- `make test-be-mariadb`: the production database engine, in a database of its own.
+             Host and credentials come from the container (docker-compose.yml, CI). The rest of
+             this file must equal phpunit.xml (TestEnvironmentTest). -->
+        <server name="DB_CONNECTION" value="mariadb"/>
+        <server name="DB_DATABASE" value="image_storage_testing"/>
+        <server name="DB_URL" value=""/>
+        <server name="MAIL_MAILER" value="array"/>
+        <server name="QUEUE_CONNECTION" value="sync"/>
+        <server name="SESSION_DRIVER" value="array"/>
+        <!-- Tests fake HTTP; a local WEATHER_PROVIDER=fake must not change which class they test. -->
+        <server name="WEATHER_PROVIDER" value="open-meteo"/>
+        <!-- The only CORS origin; deliberately not the dev one, so tests don't depend on it. -->
+        <server name="FRONTEND_URL" value="http://frontend.test"/>
+        <server name="PULSE_ENABLED" value="false"/>
+        <server name="TELESCOPE_ENABLED" value="false"/>
+        <server name="NIGHTWATCH_ENABLED" value="false"/>
+    </php>
+</phpunit>

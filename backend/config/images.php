@@ -44,6 +44,12 @@ return [
         'disk' => 1024 ** 3,
     ],
 
+    // Upper bound for the metadata JSON of one image, in bytes. Real camera metadata stays in
+    // the hundreds of KB, but ext-exif turns a crafted numeric array into text ~3.4× the size
+    // of the file ("-2147483648/-2147483648" from 8 bytes): 17.7 MB for a 5 MB TIFF, beyond
+    // MariaDB's default max_allowed_packet of 16 MiB (the whole INSERT must fit into it).
+    'max_metadata_bytes' => 8 * 1024 ** 2,
+
     'page_size' => 10,
 
 ];

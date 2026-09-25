@@ -114,6 +114,16 @@ it('responds with a JSON 404 for an unknown or malformed id', function (string $
     'not a ULID' => 'not-an-id',
 ]);
 
+// IDs are lowercase ULIDs. MariaDB compares the id column case-insensitively, so without the
+// route constraint the upper-case spelling would find the image there, but not on SQLite.
+it('responds with a JSON 404 for an existing id in upper case', function (): void {
+    $image = stored_image('valid.jpg');
+
+    $this->get('/api/v1/images/'.Str::upper($image->id).'/download')
+        ->assertNotFound()
+        ->assertHeader('Content-Type', 'application/json');
+});
+
 it('reports a record whose original is missing as a server error', function (): void {
     // A 404 would hide a storage inconsistency from monitoring and contradict the listing.
     Exceptions::fake();

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Image;
 use Illuminate\Database\Eloquent\MassAssignmentException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -27,6 +28,13 @@ it('round-trips metadata as an array', function (): void {
     $image = Image::factory()->create(['metadata' => $metadata]);
 
     expect($image->fresh()?->metadata)->toBe($metadata);
+});
+
+it('stores non-ASCII metadata unescaped, so text takes no more bytes than in the file', function (): void {
+    $image = Image::factory()->create(['metadata' => ['IPTC' => ['2#120' => ['Zażółć 📷']]]]);
+
+    expect(DB::table('images')->where('id', $image->id)->value('metadata'))
+        ->toBe('{"IPTC":{"2#120":["Zażółć 📷"]}}');
 });
 
 it('stores missing metadata as null', function (): void {

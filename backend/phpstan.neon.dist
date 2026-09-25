@@ -1,8 +1,16 @@
 includes:
     - vendor/larastan/larastan/extension.neon
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+    # Rules and checks scheduled for the next PHPStan major, enabled early.
+    - vendor/phpstan/phpstan/conf/bleedingEdge.neon
 
 parameters:
     level: max
+    strictRules:
+        # Facade and forwarding docblocks declare instance methods as "@method static" (e.g.
+        # App::isProduction(), Builder::select(), model scopes), so every ordinary call on an
+        # instance ($this->app->isProduction(), $query->select()) would be reported.
+        dynamicCallOnStaticMethod: false
     # tests/ is not analysed: Pest's API (arch(), expectation chains, the bound
     # $this in test closures) is resolved via magic calls PHPStan cannot follow
     # without a third-party extension. Rector and Pint still cover tests/.

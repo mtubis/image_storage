@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 COMPOSE := docker compose
 
-.PHONY: up down ps logs sh-php artisan fixtures test-be test-fe lint-be lint-fe build-fe fix check e2e
+.PHONY: up down ps logs sh-php artisan fixtures test-be test-be-mariadb test-fe lint-be lint-fe build-fe fix check e2e
 
 up:
 	DOCKER_UID=$$(id -u) DOCKER_GID=$$(id -g) $(COMPOSE) up -d --build
@@ -28,6 +28,12 @@ fixtures:
 test-be:
 	$(COMPOSE) exec -T php vendor/bin/pest
 
+# The same suite on MariaDB, the production engine (phpunit.mariadb.xml). The test database is
+# created on demand, so existing dev volumes (initialised before it existed) work as well.
+test-be-mariadb:
+	$(COMPOSE) exec -T db sh -c 'mariadb -uroot -p"$$MARIADB_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS image_storage_testing; GRANT ALL ON image_storage_testing.* TO \`$$MARIADB_USER\`@\`%\`;"'
+	$(COMPOSE) exec -T php vendor/bin/pest -c phpunit.mariadb.xml
+
 test-fe:
 	$(COMPOSE) exec -T frontend npm run test
 
@@ -53,7 +59,7 @@ fix:
 	$(COMPOSE) exec -T frontend npm run format
 
 # Mirrors the CI workflow (.github/workflows/ci.yml): green here means green there.
-check: lint-be test-be lint-fe test-fe build-fe
+check: lint-be test-be test-be-mariadb lint-fe test-fe build-fe
 
 e2e:
 	$(COMPOSE) -f docker-compose.yml -f docker-compose.e2e.yml up -d --build

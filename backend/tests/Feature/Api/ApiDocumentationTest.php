@@ -238,6 +238,9 @@ it('documents the upload as multipart with its constraints taken from config', f
             config()->integer('images.max_width').'×'.config()->integer('images.max_height'),
         )
         ->and($schema['properties']['uploader_name']['maxLength'])->toBe(100)
+        // The rule is a PCRE character class that ECMA-262 validators would misread; the
+        // description states it instead.
+        ->and($schema['properties']['uploader_name'])->not->toHaveKey('pattern')
         ->and($schema['properties']['uploader_email'])->toMatchArray(['format' => 'email', 'maxLength' => 255]);
 
     /** @var array<string, list<string>> $types */

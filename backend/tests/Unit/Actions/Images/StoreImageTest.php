@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 use App\Actions\Images\StoreImage;
 use App\Data\StoreImageData;
+use App\Exceptions\MetadataTooLarge;
 use App\Exceptions\ThumbnailGenerationFailed;
 use App\Jobs\FetchImageTemperature;
 use App\Models\Image;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -85,6 +87,24 @@ it('stores no metadata when the image has none', function (): void {
     $image = resolve(StoreImage::class)->handle(store_image_data('valid.png', 'image/png', 'png'));
 
     expect($image->refresh()->metadata)->toBeNull();
+});
+
+it('accepts metadata up to the configured size and stores nothing beyond it', function (): void {
+    $encodedSize = strlen((string) DB::table('images')
+        ->where('id', resolve(StoreImage::class)->handle(store_image_data('exif-iptc.jpg'))->id)
+        ->value('metadata'));
+
+    config(['images.max_metadata_bytes' => $encodedSize]);
+    resolve(StoreImage::class)->handle(store_image_data('exif-iptc.jpg'));
+
+    config(['images.max_metadata_bytes' => $encodedSize - 1]);
+    expect(fn (): Image => resolve(StoreImage::class)->handle(store_image_data('exif-iptc.jpg')))
+        ->toThrow(MetadataTooLarge::class, "Encoded metadata takes {$encodedSize} bytes, more than the limit of ".($encodedSize - 1).'.')
+        ->and(Image::query()->count())->toBe(2)
+        ->and(Storage::disk('originals')->allFiles())->toHaveCount(2)
+        ->and(Storage::disk('thumbnails')->allFiles())->toHaveCount(2);
+
+    Queue::assertPushed(FetchImageTemperature::class, 2);
 });
 
 it('queues fetching the temperature for the stored image', function (): void {

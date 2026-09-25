@@ -29,6 +29,6 @@ arch('DTOs are immutable')
     ->toBeReadonly();
 
 // Consumers depend on contracts (bound in AppServiceProvider), never on a concrete adapter.
-arch('actions and jobs depend on contracts, not adapters')
-    ->expect(['App\Actions', 'App\Jobs'])
+arch('actions, jobs and the HTTP layer depend on contracts, not adapters')
+    ->expect(['App\Actions', 'App\Jobs', 'App\Http'])
     ->not->toUse('App\Services');
