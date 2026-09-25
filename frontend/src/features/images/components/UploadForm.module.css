@@ -1,0 +1,85 @@
+.section {
+  margin-bottom: var(--space-5);
+}
+
+.heading {
+  margin-bottom: var(--space-3);
+  font-size: 1.25rem;
+}
+
+.form {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 32rem;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+/* Spacing by margins, not gap: the (often empty) live region below a control takes no room. */
+.field {
+  display: grid;
+}
+
+.field .hint,
+.field .error {
+  margin-top: var(--space-1);
+}
+
+.field label {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.label {
+  font-weight: 600;
+}
+
+.field input {
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-2);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.field input[type='file'] {
+  padding: var(--space-1);
+}
+
+.field input[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.hint {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 0.875rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.button[aria-disabled='true'] {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.progress {
+  flex: 1;
+  min-width: 8rem;
+}
+
+.success {
+  overflow-wrap: anywhere;
+}

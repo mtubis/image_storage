@@ -36,6 +36,11 @@ export const imagePageSchema = z.object({
 
 export type ImagePage = z.infer<typeof imagePageSchema>;
 
+// A single image as returned by the upload: Laravel wraps a resource in `data`.
+export const imageResponseSchema = z.object({
+  data: imageSchema,
+});
+
 // Laravel's default 422 body: messages keyed by the request field name.
 export const validationErrorSchema = z.object({
   message: z.string(),
