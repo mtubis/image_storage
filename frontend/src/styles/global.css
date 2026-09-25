@@ -1,0 +1,65 @@
+/* Minimal reset and design tokens shared by all CSS Modules. */
+
+:root {
+  --color-text: #1f2328;
+  --color-muted: #59636e;
+  --color-bg: #f6f8fa;
+  --color-surface: #ffffff;
+  --color-border: #d1d9e0;
+  --color-accent: #0969da;
+  --color-danger: #cf222e;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2rem;
+  --radius: 0.375rem;
+  --focus-ring: 2px solid var(--color-accent);
+
+  color: var(--color-text);
+  background: var(--color-bg);
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body,
+h1,
+h2,
+h3,
+p,
+figure,
+ul,
+ol {
+  margin: 0;
+}
+
+body {
+  /* dvh: mobile browser toolbars don't make the page jump. */
+  min-height: 100dvh;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+select,
+textarea {
+  font: inherit;
+}
+
+/* Keyboard users get a visible focus indicator; mouse clicks don't. */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}

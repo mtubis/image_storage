@@ -96,6 +96,10 @@ services:
         APP_GID: ${DOCKER_GID:-1000}
     ports:
       - "5173:5173"
+    environment:
+      # Read by Vite from the process environment; the browser calls the API on the host port.
+      # Fixed like APP_URL and FRONTEND_URL, which it must agree with (CORS, absolute URLs).
+      VITE_API_URL: http://localhost:8000/api/v1
     volumes:
       - ./frontend:/app
     working_dir: /app

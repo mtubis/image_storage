@@ -18,6 +18,10 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // Fixed, so tests never depend on the developer's .env; MSW handlers use the same URL.
+    env: {
+      VITE_API_URL: 'http://api.test/api/v1',
+    },
     restoreMocks: true,
     unstubEnvs: true,
     unstubGlobals: true,

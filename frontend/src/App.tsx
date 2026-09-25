@@ -1,9 +1,5 @@
-import styles from './App.module.css';
+import { AppLayout } from '@/components/AppLayout';
 
 export function App() {
-  return (
-    <main className={styles.app}>
-      <h1>Image Storage</h1>
-    </main>
-  );
+  return <AppLayout />;
 }
