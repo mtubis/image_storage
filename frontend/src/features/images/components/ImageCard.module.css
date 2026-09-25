@@ -8,7 +8,9 @@
   border-radius: var(--radius);
 }
 
+/* The grid centres the "Preview unavailable" placeholder; the image is positioned absolutely. */
 .thumbnail {
+  position: relative;
   display: grid;
   place-items: center;
   aspect-ratio: 1;
@@ -16,7 +18,11 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Out of the flow: a portrait thumbnail would otherwise grow the box, since aspect-ratio
+   yields to taller content. */
 .thumbnail img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -27,7 +33,11 @@
   font-size: 0.875rem;
 }
 
+/* Fills the card, which a grid row stretches to its tallest neighbour. */
 .body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   padding: var(--space-2) var(--space-3) var(--space-3);
 }
 
@@ -56,6 +66,7 @@
 }
 
 .details dt {
+  flex-shrink: 0;
   color: var(--color-muted);
 }
 
@@ -65,8 +76,14 @@
   text-align: right;
 }
 
+/* Uploader names can be 255 characters long too: clamped so they can't stretch the card. */
 .uploader {
+  display: -webkit-box;
+  overflow: hidden;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .actions {
@@ -74,7 +91,9 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  margin-top: var(--space-3);
+  /* Pinned to the bottom, so the buttons line up across a row of cards. */
+  margin-top: auto;
+  padding-top: var(--space-3);
 }
 
 /* One look for the download link and the buttons next to it. */
@@ -97,11 +116,6 @@
 .danger {
   composes: action;
   color: var(--color-danger);
-}
-
-.action[aria-disabled='true'] {
-  cursor: progress;
-  opacity: 0.6;
 }
 
 /* Takes its own row, so the question and its answers wrap together on narrow cards. */

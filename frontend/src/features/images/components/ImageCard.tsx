@@ -61,7 +61,9 @@ export function ImageCard({ image, onDeleted }: ImageCardProps) {
           </div>
           <div>
             <dt>Uploaded by</dt>
-            <dd className={styles.uploader}>{image.uploader_name}</dd>
+            <dd className={styles.uploader} title={image.uploader_name}>
+              {image.uploader_name}
+            </dd>
           </div>
         </dl>
         <div className={styles.actions}>

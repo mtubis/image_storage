@@ -7,6 +7,8 @@
   --color-surface: #ffffff;
   --color-border: #d1d9e0;
   --color-accent: #0969da;
+  --color-accent-hover: #0550ae;
+  --color-on-accent: #ffffff;
   --color-danger: #cf222e;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -56,6 +58,30 @@ button,
 select,
 textarea {
   font: inherit;
+}
+
+/* One look for every button, instead of each platform's native one. */
+button {
+  padding: var(--space-1) var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+button:hover:not([aria-disabled='true']) {
+  background: var(--color-bg);
+}
+
+/* Busy controls use aria-disabled (it keeps the focus), so they need their own disabled look.
+   Greyed by colour, not opacity, which would fade the focus ring below 3:1 contrast. The element
+   selector outranks the modules' single-class rules without relying on stylesheet order. */
+:is(button, a)[aria-disabled='true'] {
+  color: var(--color-muted);
+  background: var(--color-bg);
+  border-color: var(--color-border);
+  cursor: progress;
 }
 
 /* Keyboard users get a visible focus indicator; mouse clicks don't. */

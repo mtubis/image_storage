@@ -179,12 +179,7 @@ function ListEnd({
           stays on it. `aria-disabled`, not `disabled`, which would drop the focus; a click
           meanwhile is a no-op anyway (`cancelRefetch: false`). */}
       {hasNextPage && (
-        <button
-          type="button"
-          className={styles.button}
-          aria-disabled={isFetching}
-          onClick={() => void fetchNextPage()}
-        >
+        <button type="button" aria-disabled={isFetching} onClick={() => void fetchNextPage()}>
           {isFetchNextPageError ? 'Try again' : 'Load more'}
         </button>
       )}

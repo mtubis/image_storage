@@ -58,9 +58,11 @@
   font-size: 0.875rem;
 }
 
+/* Server messages may quote a long file name. */
 .error {
   color: var(--color-danger);
   font-size: 0.875rem;
+  overflow-wrap: anywhere;
 }
 
 .actions {
@@ -70,9 +72,15 @@
   gap: var(--space-3);
 }
 
-.button[aria-disabled='true'] {
-  cursor: progress;
-  opacity: 0.6;
+/* Accent marks the page's only primary action; the white label keeps 5.2:1 (7.6:1 on hover). */
+.button {
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.button:hover:not([aria-disabled='true']) {
+  background: var(--color-accent-hover);
 }
 
 .progress {
